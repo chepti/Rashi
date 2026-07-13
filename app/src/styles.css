@@ -123,3 +123,8 @@ h1, h2, h3 { margin: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 .float-up { animation: float-up 0.4s ease both; }
+
+@keyframes trail-pulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(15, 118, 110, 0.28), 0 3px 8px rgba(90, 62, 20, 0.4); }
+  50% { box-shadow: 0 0 0 13px rgba(15, 118, 110, 0.1), 0 3px 8px rgba(90, 62, 20, 0.4); }
+}

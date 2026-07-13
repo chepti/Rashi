@@ -1,9 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { UNITS } from '../data/units';
 import { setGuestFreeNav, type StudentSession, type ProgressData } from '../lib/api';
 import { unitDoneCount, unitUnlocked, unitCompleted, overallPercent, allCompleted } from '../lib/progressUtil';
+import JourneyTrail from './JourneyTrail';
 import { nav } from '../App';
+
+type MapView = 'trail' | 'list';
+const LS_VIEW = 'rashi_map_view';
 
 export default function JourneyMap({
   session,
@@ -19,6 +23,14 @@ export default function JourneyMap({
   const pct = overallPercent(progress);
   const finished = allCompleted(progress);
   const celebrated = useRef(false);
+  const [view, setView] = useState<MapView>(() =>
+    localStorage.getItem(LS_VIEW) === 'list' ? 'list' : 'trail'
+  );
+
+  const switchView = (v: MapView) => {
+    setView(v);
+    localStorage.setItem(LS_VIEW, v);
+  };
 
   useEffect(() => {
     if (finished && !celebrated.current) {
@@ -100,7 +112,34 @@ export default function JourneyMap({
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* מתג תצוגה: מפת מסע / רשימה */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 4, background: '#eadfc8', borderRadius: 999, padding: 4 }}>
+          {(['trail', 'list'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => switchView(v)}
+              style={{
+                border: 'none',
+                borderRadius: 999,
+                padding: '6px 16px',
+                fontSize: 13.5,
+                fontWeight: 700,
+                background: view === v ? '#fff' : 'transparent',
+                boxShadow: view === v ? 'var(--shadow)' : 'none',
+                color: view === v ? '#6b4f26' : 'var(--ink-soft)',
+                cursor: 'pointer',
+              }}
+            >
+              {v === 'trail' ? '🗺️ מפת מסע' : '☰ רשימה'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === 'trail' && <JourneyTrail progress={progress} />}
+
+      <div style={{ display: view === 'list' ? 'flex' : 'none', flexDirection: 'column', gap: 14 }}>
         {UNITS.map((unit, i) => {
           const unlocked = unitUnlocked(progress, i);
           const done = unitDoneCount(progress, unit);
