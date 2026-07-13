@@ -3,6 +3,7 @@ import type { QuizActivity, ActivityResult, LetterEvents } from '../data/types';
 import { addTextEvents, addLetterEvent } from '../lib/mastery';
 import { uniqueLetters } from '../data/letters';
 import { ProgressDots, RashiCard } from './ui';
+import { playCorrect, playWrong } from '../lib/sound';
 
 export default function Quiz({
   activity,
@@ -24,6 +25,8 @@ export default function Quiz({
     if (chosen !== null) return;
     const ok = i === q.correct;
     setChosen(i);
+    if (ok) playCorrect();
+    else playWrong();
     if (!ok) setShakeKey((k) => k + 1);
     const targets = q.targetLetters ?? (q.rashiText ? uniqueLetters(q.rashiText) : []);
     for (const l of targets) addLetterEvent(events, l, ok);

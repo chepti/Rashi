@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import type { MemoryActivity, ActivityResult, LetterEvents } from '../data/types';
 import { addLetterEvent } from '../lib/mastery';
 import { uniqueLetters } from '../data/letters';
+import { playCorrect, playTap } from '../lib/sound';
 
 // משחק זיכרון: קלף אחד בכתב רש"י, בן הזוג שלו בכתב רגיל.
 
@@ -45,6 +46,7 @@ export default function Memory({
 
   const flip = (card: Card) => {
     if (lock || open.includes(card.id) || matched.has(card.pair)) return;
+    playTap();
     const now = [...open, card.id];
     setOpen(now);
     if (now.length === 2) {
@@ -53,6 +55,7 @@ export default function Memory({
       const [c1, c2] = now.map((id) => cards.find((c) => c.id === id)!);
       if (c1.pair === c2.pair) {
         setTimeout(() => {
+          playCorrect();
           const nm = new Set(matched).add(c1.pair);
           setMatched(nm);
           uniqueLetters(activity.pairs[c1.pair].a).forEach((l) => addLetterEvent(events, l, true));

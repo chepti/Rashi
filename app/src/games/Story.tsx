@@ -3,6 +3,7 @@ import type { StoryActivity, ActivityResult, LetterEvents } from '../data/types'
 import { addLetterEvent } from '../lib/mastery';
 import { uniqueLetters, LETTERS } from '../data/letters';
 import { ProgressDots } from './ui';
+import { playCorrect, playWrong } from '../lib/sound';
 
 // סיפור עם קו מפריד נגרר: מימין לקו — כתב רגיל, משמאלו — כתב רש"י.
 // (שחזור של רכיב ה"השוואה" מהאתר המקורי, בלי תמונות — טקסט חי)
@@ -67,6 +68,8 @@ export default function Story({
       if (chosen !== null) return;
       const ok = i === q.correct;
       setChosen(i);
+      if (ok) playCorrect();
+      else playWrong();
       if (ok) {
         setScore((s) => s + 1);
         // קריאה מוצלחת = חיזוק לאותיות הקשות שמופיעות בסיפור

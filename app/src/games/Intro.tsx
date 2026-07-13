@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { IntroActivity, ActivityResult } from '../data/types';
 import { LETTERS } from '../data/letters';
+import { playTap } from '../lib/sound';
 
 // כרטיסי היכרות: אות בכתב רש"י, לחיצה הופכת לכתב רגיל + שם האות + רמז
 
@@ -14,6 +15,7 @@ export default function Intro({
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
 
   const flip = (ch: string) => {
+    playTap();
     setFlipped((prev) => new Set(prev).add(ch));
   };
 

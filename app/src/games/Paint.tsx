@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { PaintActivity, ActivityResult, LetterEvents } from '../data/types';
 import { addTextEvents } from '../lib/mastery';
 import { ProgressDots } from './ui';
+import { playCorrect, playWrong } from '../lib/sound';
 
 // ציור לפי הוראות: כל הוראה כתובה בכתב רש"י. צובעים משבצות ובודקים.
 
@@ -41,6 +42,7 @@ export default function Paint({
     const ok = target.size === current.size && [...current].every((k) => target.has(k));
     addTextEvents(events, s.text, ok);
     if (ok) {
+      playCorrect();
       setPainted((prev) => new Set([...prev, ...current]));
       setCurrent(new Set());
       setScore((sc) => sc + 1);
@@ -57,6 +59,7 @@ export default function Paint({
         }
       }, 700);
     } else {
+      playWrong();
       setFeedback('bad');
     }
   };

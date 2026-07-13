@@ -11,6 +11,7 @@ import Story from './Story';
 import Order from './Order';
 import Paint from './Paint';
 import { Stars, starsFor } from './ui';
+import { playWin } from '../lib/sound';
 
 export default function GameHost({
   activity,
@@ -23,6 +24,7 @@ export default function GameHost({
 
   const finish = (r: ActivityResult) => {
     setResult(r);
+    playWin();
     const stars = starsFor(r.score, r.max);
     confetti({
       particleCount: stars === 3 ? 160 : stars === 2 ? 90 : 40,

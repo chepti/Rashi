@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { OrderActivity, ActivityResult, LetterEvents } from '../data/types';
 import { addLetterEvent } from '../lib/mastery';
+import { playCorrect, playWrong } from '../lib/sound';
 
 // סידור האלף-בית: לוחצים על האותיות (בכתב רש"י) לפי הסדר הנכון.
 
@@ -30,6 +31,7 @@ export default function Order({
   const clickLetter = (ch: string) => {
     const expected = activity.items[nextIdx];
     if (ch === expected) {
+      playCorrect();
       addLetterEvent(events, ch, !erredThis ? true : false);
       if (!erredThis) setFirstTry((f) => f + 1);
       setErredThis(false);
@@ -42,6 +44,7 @@ export default function Order({
         );
       }
     } else {
+      playWrong();
       addLetterEvent(events, ch, false);
       setErredThis(true);
       setWrongCh(ch);

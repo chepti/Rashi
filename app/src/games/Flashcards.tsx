@@ -3,6 +3,7 @@ import type { FlashcardsActivity, ActivityResult, LetterEvents } from '../data/t
 import { addLetterEvent } from '../lib/mastery';
 import { hebrewLetters, uniqueLetters } from '../data/letters';
 import { ProgressDots, RashiCard } from './ui';
+import { playCorrect, playWrong } from '../lib/sound';
 
 // כרטיס תמלול: מילה בכתב רש"י — מקלידים בכתב רגיל.
 
@@ -47,10 +48,12 @@ export default function Flashcards({
     if (state !== 'typing' || !input.trim()) return;
     const ok = normalize(input) === normalize(card.text);
     if (ok) {
+      playCorrect();
       for (const l of uniqueLetters(card.text)) addLetterEvent(events, l, true);
       setScore((s) => s + 1);
       setState('right');
     } else {
+      playWrong();
       const { ok: okL, bad } = letterDiff(card.text, input);
       okL.forEach((l) => addLetterEvent(events, l, true));
       bad.forEach((l) => addLetterEvent(events, l, false));

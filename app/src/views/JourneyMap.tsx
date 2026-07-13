@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import { UNITS } from '../data/units';
 import { setGuestFreeNav, type StudentSession, type ProgressData } from '../lib/api';
 import { unitDoneCount, unitUnlocked, unitCompleted, overallPercent, allCompleted } from '../lib/progressUtil';
+import { soundEnabled, toggleSound } from '../lib/sound';
 import JourneyTrail from './JourneyTrail';
 import { nav } from '../App';
 
@@ -26,6 +27,7 @@ export default function JourneyMap({
   const [view, setView] = useState<MapView>(() =>
     localStorage.getItem(LS_VIEW) === 'list' ? 'list' : 'trail'
   );
+  const [sound, setSound] = useState(soundEnabled());
 
   const switchView = (v: MapView) => {
     setView(v);
@@ -45,6 +47,154 @@ export default function JourneyMap({
     }
   }, [finished]);
 
+  // במפת המסע מתחילים מתחתית המפה — שם תחילת הדרך.
+  // הדפדפן משחזר גלילה אחרי טעינה, לכן מכבים את השחזור ומנסים פעמיים.
+  useEffect(() => {
+    if (view === 'trail') {
+      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+      const toBottom = () => window.scrollTo(0, document.documentElement.scrollHeight);
+      requestAnimationFrame(toBottom);
+      const t = setTimeout(toBottom, 120);
+      return () => clearTimeout(t);
+    }
+    window.scrollTo(0, 0);
+  }, [view]);
+
+  const isTeacherPreview = session.token === 'teacher-preview';
+
+  // ─── כפתור עגול מרחף ───
+  const fab = (label: string, title: string, onClick: () => void, active = false) => (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: '50%',
+        border: active ? '3px solid var(--teal)' : '3px solid rgba(125, 82, 38, 0.85)',
+        background: 'rgba(255, 254, 247, 0.94)',
+        fontSize: 21,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        boxShadow: '0 4px 10px rgba(30, 70, 20, 0.35)',
+        flexShrink: 0,
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  if (view === 'trail') {
+    return (
+      <div style={{ position: 'relative' }}>
+        <JourneyTrail progress={progress} />
+
+        {/* פס התקדמות דק צמוד לראש המסך */}
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 8, background: 'rgba(255,255,255,0.4)', zIndex: 10 }}>
+          <div
+            style={{
+              width: `${pct}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, var(--gold), #f3c53d)',
+              transition: 'width 0.6s ease',
+              borderRadius: '0 999px 999px 0',
+            }}
+          />
+        </div>
+
+        {/* שלום + אחוז — מוצמד לפינה הימנית העליונה */}
+        <div
+          style={{
+            position: 'fixed',
+            top: 16,
+            right: 12,
+            zIndex: 10,
+            background: 'rgba(255, 254, 247, 0.94)',
+            border: '3px solid rgba(125, 82, 38, 0.85)',
+            borderRadius: 999,
+            padding: '7px 18px',
+            boxShadow: '0 4px 10px rgba(30, 70, 20, 0.35)',
+            maxWidth: '58vw',
+          }}
+        >
+          <div style={{ fontSize: 16.5, fontWeight: 900, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {session.emoji} {session.nickname}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 700 }}>
+            {isTeacherPreview ? 'תצוגת מורה' : session.className ? `כיתת ${session.className}` : 'תרגול חופשי'}
+            {' '}· {pct}%
+          </div>
+        </div>
+
+        {/* כפתורי פעולה — מוצמדים לפינה השמאלית העליונה */}
+        <div style={{ position: 'fixed', top: 16, left: 12, zIndex: 10, display: 'flex', gap: 8 }}>
+          {fab('🔤', 'האותיות שלי', () => nav('/progress'))}
+          {fab(sound ? '🔊' : '🔇', sound ? 'השתקת צלילים' : 'הפעלת צלילים', () => setSound(toggleSound()), sound)}
+          {fab('☰', 'תצוגת רשימה', () => switchView('list'))}
+          {isTeacherPreview
+            ? fab('🏫', 'חזרה ללוח המורה', () => onLogout('/teacher'))
+            : fab('👥', 'החלפת משתמש — במחשב משותף כל תלמיד נכנס עם השם והאימוג\'י שלו', () => onLogout())}
+        </div>
+
+        {/* מסלול חופשי לאורח — צף בתחתית המסך */}
+        {session.token === 'guest' && (
+          <label
+            style={{
+              position: 'fixed',
+              bottom: 14,
+              left: 12,
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              fontSize: 13.5,
+              fontWeight: 700,
+              color: '#4a3416',
+              background: 'rgba(255, 254, 247, 0.94)',
+              border: '3px solid rgba(125, 82, 38, 0.85)',
+              borderRadius: 999,
+              padding: '7px 14px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 10px rgba(30, 70, 20, 0.35)',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={!!session.freeNav}
+              onChange={(e) => onSessionChange(setGuestFreeNav(session, e.target.checked))}
+            />
+            🔓 מסלול חופשי
+          </label>
+        )}
+
+        {/* חגיגת סיום */}
+        {finished && (
+          <div
+            className="pop-in"
+            style={{
+              position: 'fixed',
+              bottom: 14,
+              right: 12,
+              zIndex: 10,
+              background: 'rgba(255, 254, 247, 0.96)',
+              border: '3px solid var(--gold)',
+              borderRadius: 16,
+              padding: '10px 18px',
+              boxShadow: '0 4px 14px rgba(30, 70, 20, 0.4)',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: 26 }}>🏆</div>
+            <div style={{ fontSize: 14.5, fontWeight: 900 }}>סיימתם את כל המסע!</div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── תצוגת רשימה ───
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 60px' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 6 }}>
@@ -53,17 +203,17 @@ export default function JourneyMap({
             שלום, {session.nickname} {session.emoji}! <span className="rashi-font" style={{ fontSize: 24, color: 'var(--teal)' }}>שלום</span>
           </h1>
           <p style={{ color: 'var(--ink-soft)', margin: '2px 0 0', fontSize: 14 }}>
-            {session.token === 'teacher-preview'
+            {isTeacherPreview
               ? 'תצוגת מורה · כל השלבים פתוחים'
               : session.className
                 ? `כיתת ${session.className}`
                 : 'תרגול חופשי'}
             {' '}· הושלמו {pct}% מהמסע
-            {progress.freeNav && session.token !== 'teacher-preview' ? ' · 🔓 מסלול חופשי' : ''}
+            {progress.freeNav && !isTeacherPreview ? ' · 🔓 מסלול חופשי' : ''}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {session.token === 'teacher-preview' && (
+          {isTeacherPreview && (
             <button className="btn secondary small" onClick={() => onLogout('/teacher')}>
               ← חזרה ללוח המורה
             </button>
@@ -78,10 +228,13 @@ export default function JourneyMap({
               מסלול חופשי
             </label>
           )}
+          <button className="btn secondary small" onClick={() => switchView('trail')}>
+            🗺️ מפת מסע
+          </button>
           <button className="btn secondary small" onClick={() => nav('/progress')}>
             🔤 האותיות שלי
           </button>
-          {session.token !== 'teacher-preview' && (
+          {!isTeacherPreview && (
             <button className="btn small" style={{ background: 'transparent', boxShadow: 'none', color: 'var(--ink-soft)' }} onClick={() => onLogout()} title="במחשב משותף — כל תלמיד נכנס עם השם והאימוג'י שלו">
               👥 החלפת משתמש
             </button>
@@ -112,34 +265,7 @@ export default function JourneyMap({
         </div>
       )}
 
-      {/* מתג תצוגה: מפת מסע / רשימה */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 4, background: '#eadfc8', borderRadius: 999, padding: 4 }}>
-          {(['trail', 'list'] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => switchView(v)}
-              style={{
-                border: 'none',
-                borderRadius: 999,
-                padding: '6px 16px',
-                fontSize: 13.5,
-                fontWeight: 700,
-                background: view === v ? '#fff' : 'transparent',
-                boxShadow: view === v ? 'var(--shadow)' : 'none',
-                color: view === v ? '#6b4f26' : 'var(--ink-soft)',
-                cursor: 'pointer',
-              }}
-            >
-              {v === 'trail' ? '🗺️ מפת מסע' : '☰ רשימה'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {view === 'trail' && <JourneyTrail progress={progress} />}
-
-      <div style={{ display: view === 'list' ? 'flex' : 'none', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {UNITS.map((unit, i) => {
           const unlocked = unitUnlocked(progress, i);
           const done = unitDoneCount(progress, unit);

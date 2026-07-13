@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import type { WordSearchActivity, ActivityResult, LetterEvents } from '../data/types';
 import { addLetterEvent } from '../lib/mastery';
 import { uniqueLetters } from '../data/letters';
+import { playCorrect, playWrong } from '../lib/sound';
 
 // תפזורת בכתב רש"י.
 // מצב רגיל: מילים אופקיות נקראות מימין לשמאל, אנכיות מלמעלה למטה.
@@ -128,6 +129,7 @@ export default function WordSearch({
       return (pk === pathKey || pk === revKey) && !found.has(p.word);
     });
     if (hit) {
+      playCorrect();
       const nf = new Set(found).add(hit.word);
       setFound(nf);
       const cellsNew = new Set(foundCells);
@@ -140,6 +142,7 @@ export default function WordSearch({
         setTimeout(() => onFinish({ score: placements.length, max: placements.length, letters: events }), 700);
       }
     } else {
+      playWrong();
       setFlash('bad');
       setTimeout(() => setFlash(null), 400);
     }

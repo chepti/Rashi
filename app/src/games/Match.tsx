@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import type { MatchActivity, ActivityResult, LetterEvents } from '../data/types';
 import { addLetterEvent } from '../lib/mastery';
 import { uniqueLetters } from '../data/letters';
+import { playCorrect, playWrong } from '../lib/sound';
 
 // התאמה: בוחרים מילה בכתב רגיל ומניחים אותה על המילה המתאימה בכתב רש"י.
 // עובד בלחיצה-לחיצה (נוח גם למגע וגם לעכבר).
@@ -32,6 +33,7 @@ export default function Match({
   const tryPlace = (targetIdx: number) => {
     if (selected === null || placed.has(targetIdx)) return;
     if (selected === targetIdx) {
+      playCorrect();
       const np = new Set(placed).add(targetIdx);
       setPlaced(np);
       uniqueLetters(activity.pairs[targetIdx].rashi).forEach((l) => addLetterEvent(events, l, true));
@@ -42,6 +44,7 @@ export default function Match({
         setTimeout(() => onFinish({ score, max, letters: events }), 600);
       }
     } else {
+      playWrong();
       setMistakes((m) => m + 1);
       uniqueLetters(activity.pairs[targetIdx].rashi).forEach((l) => addLetterEvent(events, l, false));
       setWrongTarget(targetIdx);
