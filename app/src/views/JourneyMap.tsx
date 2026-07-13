@@ -4,6 +4,7 @@ import { UNITS } from '../data/units';
 import { setGuestFreeNav, type StudentSession, type ProgressData } from '../lib/api';
 import { unitDoneCount, unitUnlocked, unitCompleted, overallPercent, allCompleted } from '../lib/progressUtil';
 import { soundEnabled, toggleSound } from '../lib/sound';
+import { TypeIcon, Volume2, VolumeX, ListIcon, Users, School, Unlock } from '../ui/icons';
 import JourneyTrail from './JourneyTrail';
 import { nav } from '../App';
 
@@ -63,17 +64,18 @@ export default function JourneyMap({
   const isTeacherPreview = session.token === 'teacher-preview';
 
   // ─── כפתור עגול מרחף ───
-  const fab = (label: string, title: string, onClick: () => void, active = false) => (
+  const fab = (icon: React.ReactNode, title: string, onClick: () => void) => (
     <button
       onClick={onClick}
       title={title}
+      aria-label={title}
       style={{
         width: 46,
         height: 46,
         borderRadius: '50%',
-        border: active ? '3px solid var(--teal)' : '3px solid rgba(125, 82, 38, 0.85)',
-        background: 'rgba(255, 254, 247, 0.94)',
-        fontSize: 21,
+        border: '2.5px solid rgba(125, 82, 38, 0.7)',
+        background: 'rgba(255, 254, 247, 0.95)',
+        color: '#6b4f26',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -82,7 +84,7 @@ export default function JourneyMap({
         flexShrink: 0,
       }}
     >
-      {label}
+      {icon}
     </button>
   );
 
@@ -130,12 +132,12 @@ export default function JourneyMap({
 
         {/* כפתורי פעולה — מוצמדים לפינה השמאלית העליונה */}
         <div style={{ position: 'fixed', top: 16, left: 12, zIndex: 10, display: 'flex', gap: 8 }}>
-          {fab('🔤', 'האותיות שלי', () => nav('/progress'))}
-          {fab(sound ? '🔊' : '🔇', sound ? 'השתקת צלילים' : 'הפעלת צלילים', () => setSound(toggleSound()), sound)}
-          {fab('☰', 'תצוגת רשימה', () => switchView('list'))}
+          {fab(<TypeIcon size={21} />, 'האותיות שלי', () => nav('/progress'))}
+          {fab(sound ? <Volume2 size={21} /> : <VolumeX size={21} />, sound ? 'השתקת צלילים' : 'הפעלת צלילים', () => setSound(toggleSound()))}
+          {fab(<ListIcon size={21} />, 'תצוגת רשימה', () => switchView('list'))}
           {isTeacherPreview
-            ? fab('🏫', 'חזרה ללוח המורה', () => onLogout('/teacher'))
-            : fab('👥', 'החלפת משתמש — במחשב משותף כל תלמיד נכנס עם השם והאימוג\'י שלו', () => onLogout())}
+            ? fab(<School size={21} />, 'חזרה ללוח המורה', () => onLogout('/teacher'))
+            : fab(<Users size={21} />, 'החלפת משתמש — במחשב משותף כל תלמיד נכנס עם השם והאימוג\'י שלו', () => onLogout())}
         </div>
 
         {/* מסלול חופשי לאורח — צף בתחתית המסך */}
@@ -165,7 +167,8 @@ export default function JourneyMap({
               checked={!!session.freeNav}
               onChange={(e) => onSessionChange(setGuestFreeNav(session, e.target.checked))}
             />
-            🔓 מסלול חופשי
+            <Unlock size={16} />
+            מסלול חופשי
           </label>
         )}
 

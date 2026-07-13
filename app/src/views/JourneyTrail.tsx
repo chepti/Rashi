@@ -1,35 +1,32 @@
 import React from 'react';
 import { UNITS } from '../data/units';
+import type { Unit, Activity } from '../data/types';
 import type { ProgressData } from '../lib/api';
-import { unitDoneCount, unitUnlocked, unitCompleted, isSkipped } from '../lib/progressUtil';
+import { unitUnlocked, isSkipped } from '../lib/progressUtil';
 import { starsFor } from '../games/ui';
+import { ACTIVITY_ICONS, Lock, SkipForward, Check, Star } from '../ui/icons';
+import { Tree, Pine, Bush, Mushroom, Rock, Daisy, Tulip, Butterfly, Stump, Bridge, Grass } from './scenery';
 import { nav } from '../App';
 
-// מפת מסע משחקית במסך מלא: אחו ירוק, נהר, גשרים, עצים ופרחים.
-// השביל מטפס מתחתית המפה למעלה; כל יחידה — תחנה עם כוכבים.
+// מפת מסע במסך מלא: כל פעילות היא תחנה על השביל, כל יחידה — מקטע צבעוני.
+// שמות מוצגים בריחוף בלבד; שלטי עץ מסמנים תחילת כל מקטע.
 
-const NODE_GAP = 158;        // מרווח אנכי בין תחנות (px)
-const PAD_TOP = 150;         // מקום לגביע בראש המפה
-const PAD_BOTTOM = 120;      // מקום לשלט הפתיחה למטה
+const GAP = 96;              // מרווח אנכי בין תחנות
+const PAD_TOP = 175;
+const PAD_BOTTOM = 135;
+
+// צבע לכל יחידה — לפי הסדר
+const UNIT_COLORS = ['#0d9488', '#f59e0b', '#8b5cf6', '#e05252', '#3b82f6', '#ec4899', '#16a34a', '#a16207', '#d97706'];
+
+interface Station {
+  unit: Unit;
+  unitIndex: number;
+  act: Activity;
+  actIndex: number;
+}
 
 interface Pt { x: number; y: number }
 
-export function trailHeight(): number {
-  return PAD_TOP + PAD_BOTTOM + (UNITS.length - 1) * NODE_GAP;
-}
-
-/** מיקומי התחנות: מלמטה למעלה, מתפתלים ימינה-שמאלה (באחוזי רוחב המסלול) */
-function nodePositions(count: number, height: number): Pt[] {
-  const pts: Pt[] = [];
-  for (let i = 0; i < count; i++) {
-    const y = height - PAD_BOTTOM - i * NODE_GAP;
-    const x = 50 + 30 * Math.sin(i * 1.15 + 0.65);
-    pts.push({ x, y });
-  }
-  return pts;
-}
-
-/** בניית path חלק דרך הנקודות (Catmull-Rom → Bezier) */
 function smoothPath(pts: Pt[]): string {
   if (pts.length < 2) return '';
   let d = `M ${pts[0].x} ${pts[0].y}`;
@@ -38,51 +35,57 @@ function smoothPath(pts: Pt[]): string {
     const p1 = pts[i];
     const p2 = pts[i + 1];
     const p3 = pts[Math.min(pts.length - 1, i + 2)];
-    const c1x = p1.x + (p2.x - p0.x) / 6;
-    const c1y = p1.y + (p2.y - p0.y) / 6;
-    const c2x = p2.x - (p3.x - p1.x) / 6;
-    const c2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+    d += ` C ${p1.x + (p2.x - p0.x) / 6} ${p1.y + (p2.y - p0.y) / 6}, ${p2.x - (p3.x - p1.x) / 6} ${p2.y - (p3.y - p1.y) / 6}, ${p2.x} ${p2.y}`;
   }
   return d;
 }
 
-/** כוכבים שהושגו ביחידה (רק פעילויות שבוצעו באמת, בלי דילוגים) */
-function unitStars(progress: ProgressData, unitIndex: number): number {
-  const unit = UNITS[unitIndex];
-  let score = 0, max = 0;
-  for (const a of unit.activities) {
-    const rec = progress.completed[a.id];
-    if (rec && !isSkipped(progress, a.id)) {
-      score += rec.score;
-      max += rec.max;
-    }
-  }
-  if (max === 0) return 0;
-  return starsFor(score, max);
-}
-
-// עצים, פרחים וחיות בשולי המפה — דטרמיניסטי כדי שהמפה תיראה זהה בכל טעינה
-const DECOR = ['🌳', '🌲', '🌷', '🍄', '🌳', '🦋', '🌼', '🪨', '🌲', '🐞', '🌸', '🌳', '🌻', '🐿️', '🍄', '🌲', '🌷', '🌳', '🦔', '🌼', '🌳', '🪨', '🌸', '🌲'];
+// פיזור נוף דטרמיניסטי בשולי המפה
+const SCENERY = [Tree, Daisy, Pine, Mushroom, Bush, Tulip, Rock, Butterfly, Tree, Grass, Stump, Daisy, Pine, Bush, Tree, Tulip, Mushroom, Rock, Grass, Butterfly, Pine, Daisy, Tree, Bush, Stump, Tulip, Grass, Mushroom, Tree, Pine];
 
 export default function JourneyTrail({ progress }: { progress: ProgressData }) {
-  const count = UNITS.length;
-  const height = trailHeight();
-  const pts = nodePositions(count, height);
+  const stations: Station[] = [];
+  UNITS.forEach((unit, unitIndex) =>
+    unit.activities.forEach((act, actIndex) => stations.push({ unit, unitIndex, act, actIndex }))
+  );
+  const n = stations.length;
+  const height = PAD_TOP + PAD_BOTTOM + (n - 1) * GAP;
 
-  const currentIdx = UNITS.findIndex((u, i) => unitUnlocked(progress, i) && !unitCompleted(progress, u));
-
-  // נקודת סיום השביל: הגביע מעל התחנה האחרונה
-  const trailPts = [...pts, { x: 50, y: PAD_TOP - 62 }];
-
-  // נהרות חוצים בין תחנות 3–4 ובין 6–7 (מלמטה), עם גשר במקום שבו השביל חוצה
-  const rivers = [2, 5].map((i) => ({
-    y: height - PAD_BOTTOM - (i + 0.5) * NODE_GAP,
-    bridgeX: (pts[i].x + pts[i + 1].x) / 2,
+  const pts: Pt[] = stations.map((_, i) => ({
+    x: 50 + 30 * Math.sin(i * 0.55 + 0.8),
+    y: height - PAD_BOTTOM - i * GAP,
   }));
+  const trailPts = [...pts, { x: 50, y: PAD_TOP - 70 }];
+
+  const isOpen = (s: Station): boolean => {
+    if (progress.freeNav) return true;
+    if (!unitUnlocked(progress, s.unitIndex)) return false;
+    if (s.actIndex === 0) return true;
+    return !!progress.completed[s.unit.activities[s.actIndex - 1].id];
+  };
+
+  const currentIdx = stations.findIndex((s) => isOpen(s) && !progress.completed[s.act.id]);
+  const allDone = currentIdx === -1;
+
+  // נהרות בשלוש נקודות לאורך הדרך, עם גשר בנקודת החצייה
+  const rivers = [0.24, 0.52, 0.78].map((f) => {
+    const i = Math.min(n - 2, Math.floor(n * f));
+    return {
+      y: (pts[i].y + pts[i + 1].y) / 2,
+      bridgeX: (pts[i].x + pts[i + 1].x) / 2,
+    };
+  });
 
   const riverPath = (y: number) =>
-    `M -5 ${y} q 12 -13 25 0 t 25 0 t 25 0 t 25 0 t 25 0`;
+    `M -5 ${y} q 12 -11 25 0 t 25 0 t 25 0 t 25 0 t 25 0`;
+
+  // מקטעי צבע: הנקודות של כל יחידה כולל נקודת החיבור מהיחידה הקודמת
+  const segments = UNITS.map((unit, ui) => {
+    const from = UNITS.slice(0, ui).reduce((a, u) => a + u.activities.length, 0);
+    const to = from + unit.activities.length;
+    const segPts = pts.slice(Math.max(0, from - 1), to);
+    return { color: UNIT_COLORS[ui], d: smoothPath(segPts) };
+  });
 
   return (
     <div
@@ -91,55 +94,46 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
         width: '100%',
         height,
         overflow: 'hidden',
-        background: 'linear-gradient(180deg, #86ca58 0%, #79c04c 30%, #8bd05f 55%, #76bd49 80%, #83c955 100%)',
+        background: 'linear-gradient(180deg, #8ecb63 0%, #7dc04f 25%, #90d266 50%, #79bd4b 75%, #86c95a 100%)',
       }}
     >
-      {/* כתמי דשא ובהובים — נותנים עומק לאחו */}
+      {/* כתמי דשא + נהרות */}
       <svg width="100%" height="100%" viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        {Array.from({ length: 26 }, (_, i) => (
+        {Array.from({ length: Math.round(height / 130) }, (_, i) => (
           <ellipse
             key={`blob-${i}`}
-            cx={(i * 37 + 13) % 100}
-            cy={(i * 149 + 80) % height}
-            rx={9 + (i % 5) * 4}
-            ry={26 + (i % 4) * 14}
-            fill={i % 2 === 0 ? 'rgba(255,255,255,0.09)' : 'rgba(20,90,20,0.09)'}
+            cx={(i * 41 + 17) % 100}
+            cy={(i * 173 + 90) % height}
+            rx={10 + (i % 5) * 4}
+            ry={30 + (i % 4) * 16}
+            fill={i % 2 === 0 ? 'rgba(255,255,255,0.10)' : 'rgba(20,90,20,0.10)'}
           />
         ))}
-        {/* נהרות */}
         {rivers.map((r, i) => (
           <g key={`river-${i}`}>
-            <path d={riverPath(r.y)} fill="none" stroke="#4aa7d8" strokeWidth={44} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-            <path d={riverPath(r.y)} fill="none" stroke="#7fc8ea" strokeWidth={30} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-            <path d={riverPath(r.y - 4)} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={3} strokeDasharray="10 14" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <path d={riverPath(r.y)} fill="none" stroke="#cbbd8a" strokeWidth={56} strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity={0.9} />
+            <path d={riverPath(r.y)} fill="none" stroke="#3f9ed2" strokeWidth={46} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <path d={riverPath(r.y)} fill="none" stroke="#74c3e8" strokeWidth={32} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <path d={riverPath(r.y - 3)} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth={3} strokeDasharray="12 16" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <path d={riverPath(r.y + 8)} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth={2.5} strokeDasharray="8 20" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           </g>
         ))}
       </svg>
 
-      {/* קישוטים — עצים, פרחים, חיות בשוליים */}
-      {DECOR.map((em, i) => {
+      {/* נוף מצויר בשוליים */}
+      {SCENERY.map((Comp, i) => {
         const leftSide = i % 2 === 0;
-        const x = leftSide ? 1.5 + ((i * 7) % 13) : 84 + ((i * 5) % 13);
-        const y = 60 + i * ((height - 160) / DECOR.length);
-        const size = 26 + (i % 4) * 9;
+        const x = leftSide ? 1 + ((i * 6.3) % 12) : 83 + ((i * 4.7) % 12);
+        const y = 90 + i * ((height - 260) / SCENERY.length);
+        const size = 54 + ((i * 13) % 42);
         return (
-          <span
-            key={`decor-${i}`}
-            style={{
-              position: 'absolute',
-              left: `${x}%`,
-              top: y,
-              fontSize: size,
-              pointerEvents: 'none',
-              filter: 'drop-shadow(0 3px 3px rgba(0,60,0,0.25))',
-            }}
-          >
-            {em}
-          </span>
+          <div key={`sc-${i}`} style={{ position: 'absolute', left: `${x}%`, top: y, pointerEvents: 'none' }}>
+            <Comp size={size} />
+          </div>
         );
       })}
 
-      {/* המסלול — רצועה מרכזית שבה השביל והתחנות */}
+      {/* רצועת המסלול */}
       <div
         style={{
           position: 'absolute',
@@ -155,92 +149,66 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           preserveAspectRatio="none"
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
         >
-          <path d={smoothPath(trailPts)} fill="none" stroke="#a97c3f" strokeWidth={32} strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity={0.85} />
-          <path d={smoothPath(trailPts)} fill="none" stroke="#f0deac" strokeWidth={24} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <path d={smoothPath(trailPts)} fill="none" stroke="#a97c3f" strokeWidth={30} strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity={0.9} />
+          <path d={smoothPath(trailPts)} fill="none" stroke="#f0deac" strokeWidth={22} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          {/* גוון צבע לכל מקטע יחידה */}
+          {segments.map((s, i) => (
+            <path key={`seg-${i}`} d={s.d} fill="none" stroke={s.color} strokeWidth={22} strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity={0.3} />
+          ))}
           <path
             d={smoothPath(trailPts)}
             fill="none"
-            stroke="#c49d5e"
+            stroke="#fffef5"
             strokeWidth={3}
-            strokeDasharray="1 15"
+            strokeDasharray="1 14"
             strokeLinecap="round"
             vectorEffect="non-scaling-stroke"
-            opacity={0.8}
+            opacity={0.9}
           />
         </svg>
 
-        {/* גשרי עץ מעל הנהרות */}
+        {/* גשרים */}
         {rivers.map((r, i) => (
           <div
             key={`bridge-${i}`}
-            style={{
-              position: 'absolute',
-              left: `${r.bridgeX}%`,
-              top: r.y,
-              transform: 'translate(-50%, -50%)',
-              width: 62,
-              height: 86,
-              borderRadius: 14,
-              background: 'repeating-linear-gradient(180deg, #c68e4c 0 12px, #a9713a 12px 15px)',
-              border: '4px solid #7d5226',
-              boxShadow: '0 5px 10px rgba(30, 60, 90, 0.4)',
-              pointerEvents: 'none',
-            }}
-          />
+            style={{ position: 'absolute', left: `${r.bridgeX}%`, top: r.y, transform: 'translate(-50%, -52%)', pointerEvents: 'none' }}
+          >
+            <Bridge size={104} />
+          </div>
         ))}
 
         {/* גביע בראש המסלול */}
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: PAD_TOP - 84,
-            transform: 'translateX(-50%)',
-            textAlign: 'center',
-            pointerEvents: 'none',
-          }}
-        >
+        <div style={{ position: 'absolute', left: '50%', top: PAD_TOP - 92, transform: 'translateX(-50%)', textAlign: 'center', pointerEvents: 'none', zIndex: 3 }}>
           <div
             style={{
-              width: 86,
-              height: 86,
+              width: 84,
+              height: 84,
               borderRadius: '50%',
-              background: currentIdx === -1
+              background: allDone
                 ? 'radial-gradient(circle at 34% 30%, #fff3b8, #f3c53d 75%)'
                 : 'radial-gradient(circle at 34% 30%, #fffdf3, #e9d9b2 75%)',
               border: '4px solid #b8860b',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 44,
+              fontSize: 42,
               boxShadow: '0 5px 12px rgba(30,70,20,0.4)',
               margin: '0 auto',
             }}
           >
             🏆
           </div>
-          <div
-            style={{
-              marginTop: 5,
-              background: '#7d5226',
-              color: '#ffefc9',
-              borderRadius: 9,
-              padding: '3px 13px',
-              fontSize: 13,
-              fontWeight: 800,
-              display: 'inline-block',
-            }}
-          >
-            {currentIdx === -1 ? '🎉 המסע הושלם!' : 'סוף המסע'}
+          <div style={{ marginTop: 5, background: '#7d5226', color: '#ffefc9', borderRadius: 9, padding: '3px 13px', fontSize: 13, fontWeight: 800, display: 'inline-block' }}>
+            {allDone ? '🎉 המסע הושלם!' : 'סוף המסע'}
           </div>
         </div>
 
-        {/* שלט פתיחה למטה */}
+        {/* שלט פתיחה */}
         <div
           style={{
             position: 'absolute',
             left: '50%',
-            bottom: 18,
+            bottom: 20,
             transform: 'translateX(-50%)',
             background: '#7d5226',
             color: '#ffefc9',
@@ -252,133 +220,154 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
             whiteSpace: 'nowrap',
             border: '3px solid #5d3b18',
             pointerEvents: 'none',
+            zIndex: 3,
           }}
         >
           🚩 כאן מתחיל המסע!
         </div>
 
-        {/* התחנות */}
-        {UNITS.map((unit, i) => {
-          const unlocked = unitUnlocked(progress, i);
-          const completed = unitCompleted(progress, unit);
-          const isCurrent = i === currentIdx;
-          const stars = unitStars(progress, i);
-          const done = unitDoneCount(progress, unit);
-          const p = pts[i];
-          const labelSide = p.x > 50 ? 'right' : 'left';
+        {/* שלטי מקטע — בתחילת כל יחידה */}
+        {UNITS.map((unit, ui) => {
+          const first = UNITS.slice(0, ui).reduce((a, u) => a + u.activities.length, 0);
+          const p = pts[first];
+          // התחנה בחצי הימני ⇐ השלט משמאלה, ולהפך
+          const anchor = p.x > 50 ? 'right' : 'left';
+          const value = anchor === 'right' ? 100 - p.x + 7 : p.x + 7;
           return (
             <div
-              key={unit.id}
+              key={`sign-${unit.id}`}
               style={{
                 position: 'absolute',
-                left: `${p.x}%`,
-                top: p.y,
-                transform: 'translate(-50%, -50%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                zIndex: 2,
-              }}
+                top: p.y - 14,
+                [anchor]: `${value}%`,
+                transform: 'rotate(-2.5deg)',
+                zIndex: 1,
+                pointerEvents: 'none',
+              } as React.CSSProperties}
+            >
+              <div
+                style={{
+                  background: '#8a5a2b',
+                  border: '3px solid #5d3b18',
+                  borderRadius: 10,
+                  color: '#ffefc9',
+                  padding: '5px 13px',
+                  fontSize: 13.5,
+                  fontWeight: 800,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 8px rgba(30,70,20,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                }}
+              >
+                <span
+                  style={{
+                    width: 13,
+                    height: 13,
+                    borderRadius: '50%',
+                    background: UNIT_COLORS[ui],
+                    border: '2px solid #ffefc9',
+                    flexShrink: 0,
+                  }}
+                />
+                {ui + 1}. {unit.title}
+              </div>
+              <div style={{ width: 6, height: 22, background: '#5d3b18', margin: '0 auto', borderRadius: 3 }} />
+            </div>
+          );
+        })}
+
+        {/* תחנות — פעילות אחת לכל נקודה */}
+        {stations.map((s, i) => {
+          const open = isOpen(s);
+          const rec = progress.completed[s.act.id];
+          const skipped = isSkipped(progress, s.act.id);
+          const completed = !!rec && !skipped;
+          const isCurrent = i === currentIdx;
+          const color = UNIT_COLORS[s.unitIndex];
+          const stars = completed ? starsFor(rec.score, rec.max) : 0;
+          const IconComp = ACTIVITY_ICONS[s.act.type];
+          const p = pts[i];
+
+          let bg = '#ffffff';
+          let ring = color;
+          let iconColor = color;
+          if (!open) { bg = '#e6e9df'; ring = '#a7b09b'; iconColor = '#8b937f'; }
+          else if (completed) { bg = color; iconColor = '#fff'; }
+          else if (skipped) { bg = '#f2f2e9'; ring = '#a7b09b'; iconColor = '#8b937f'; }
+
+          return (
+            <div
+              key={s.act.id}
+              className="trail-node-wrap"
+              style={{ position: 'absolute', left: `${p.x}%`, top: p.y, transform: 'translate(-50%, -50%)', zIndex: 2 }}
             >
               <button
-                onClick={() => unlocked && nav(`/unit/${unit.id}`)}
-                title={`${unit.title} — ${unit.subtitle}`}
+                onClick={() => open && nav(`/play/${s.unit.id}/${s.act.id}`)}
+                aria-label={s.act.title}
                 style={{
-                  width: 76,
-                  height: 76,
+                  width: isCurrent ? 60 : 54,
+                  height: isCurrent ? 60 : 54,
                   borderRadius: '50%',
-                  border: completed ? '4px solid #e0a010' : isCurrent ? '4px solid var(--teal)' : unlocked ? '4px solid #a97c3f' : '4px solid #8fa383',
-                  background: completed
-                    ? 'radial-gradient(circle at 34% 30%, #ffe9a8, #f0bf35 70%)'
-                    : unlocked
-                      ? 'radial-gradient(circle at 34% 30%, #ffffff, #f1e3bd 75%)'
-                      : 'radial-gradient(circle at 34% 30%, #dfe5d8, #b7c2ab 75%)',
-                  fontSize: 34,
+                  border: skipped ? `3px dashed ${ring}` : `3.5px solid ${ring}`,
+                  background: bg,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: unlocked ? 'pointer' : 'default',
+                  cursor: open ? 'pointer' : 'default',
                   boxShadow: isCurrent
-                    ? '0 0 0 7px rgba(15, 118, 110, 0.3), 0 5px 12px rgba(30,70,20,0.4)'
-                    : '0 5px 12px rgba(30,70,20,0.4)',
+                    ? `0 0 0 7px ${color}44, 0 5px 12px rgba(30,70,20,0.4)`
+                    : '0 4px 9px rgba(30,70,20,0.35)',
                   animation: isCurrent ? 'trail-pulse 1.8s ease-in-out infinite' : 'none',
                   transition: 'transform 0.15s',
                   position: 'relative',
                 }}
-                onMouseEnter={(e) => unlocked && (e.currentTarget.style.transform = 'scale(1.09)')}
+                onMouseEnter={(e) => open && (e.currentTarget.style.transform = 'scale(1.12)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
               >
-                {unlocked ? unit.icon : '🔒'}
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -8,
-                    right: -8,
-                    width: 27,
-                    height: 27,
-                    borderRadius: '50%',
-                    background: isCurrent ? 'var(--teal)' : '#7d5226',
-                    color: '#ffefc9',
-                    fontSize: 14,
-                    fontWeight: 900,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2.5px solid #fffef5',
-                  }}
-                >
-                  {i + 1}
-                </span>
-                {completed && (
-                  <span style={{ position: 'absolute', bottom: -7, left: -7, fontSize: 21 }}>✅</span>
+                {!open ? (
+                  <Lock size={22} color={iconColor} />
+                ) : skipped ? (
+                  <SkipForward size={22} color={iconColor} />
+                ) : (
+                  <IconComp size={isCurrent ? 27 : 24} color={iconColor} strokeWidth={2.4} />
                 )}
-              </button>
-
-              {/* כוכבים שהושגו */}
-              <div style={{ height: 22, fontSize: 16, letterSpacing: 1, marginTop: 3, filter: 'drop-shadow(0 2px 2px rgba(30,70,20,0.5))' }}>
-                {stars > 0 && '⭐'.repeat(stars)}
-                {stars === 0 && unlocked && !completed && done > 0 && (
+                {completed && (
                   <span
                     style={{
-                      fontSize: 12.5,
-                      fontWeight: 800,
-                      color: '#fff',
-                      background: 'rgba(60, 100, 30, 0.75)',
-                      borderRadius: 999,
-                      padding: '2px 9px',
+                      position: 'absolute',
+                      bottom: -5,
+                      left: -5,
+                      width: 21,
+                      height: 21,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      border: `2.5px solid ${color}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    {done}/{unit.activities.length}
+                    <Check size={12} color={color} strokeWidth={3.2} />
                   </span>
                 )}
-              </div>
-
-              {/* שם התחנה — שלט */}
-              <button
-                onClick={() => unlocked && nav(`/unit/${unit.id}`)}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  [labelSide === 'right' ? 'right' : 'left']: 90,
-                  background: unlocked ? '#fffef7' : 'rgba(240, 240, 228, 0.82)',
-                  border: `3px solid ${isCurrent ? 'var(--teal)' : completed ? '#e0a010' : '#a97c3f'}`,
-                  borderRadius: 12,
-                  padding: '7px 13px',
-                  textAlign: labelSide === 'right' ? 'left' : 'right',
-                  cursor: unlocked ? 'pointer' : 'default',
-                  maxWidth: 155,
-                  boxShadow: '0 4px 10px rgba(30,70,20,0.35)',
-                  whiteSpace: 'nowrap',
-                } as React.CSSProperties}
-              >
-                <div style={{ fontSize: 15, fontWeight: 900, color: '#4a3416' }}>{unit.title}</div>
-                {unit.newLetters.length > 0 && unit.newLetters.length <= 4 && (
-                  <div className="rashi-font" style={{ fontSize: 20, color: 'var(--teal-dark)', lineHeight: 1.1 }}>
-                    {unit.newLetters.join(' ')}
-                  </div>
-                )}
               </button>
+
+              {/* כוכבים */}
+              {completed && (
+                <div style={{ display: 'flex', gap: 1, justifyContent: 'center', marginTop: 3, filter: 'drop-shadow(0 2px 2px rgba(30,70,20,0.4))' }}>
+                  {[1, 2, 3].map((k) => (
+                    <Star key={k} filled={k <= stars} size={13} />
+                  ))}
+                </div>
+              )}
+
+              {/* שם הפעילות — בריחוף */}
+              <div className="trail-tip">
+                <div style={{ fontWeight: 800 }}>{s.act.title}</div>
+                <div style={{ fontSize: 11.5, opacity: 0.75 }}>{s.unit.title}</div>
+              </div>
             </div>
           );
         })}

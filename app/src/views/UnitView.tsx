@@ -3,18 +3,19 @@ import { UNITS } from '../data/units';
 import { reportAttempt, type ProgressData, type StudentSession } from '../lib/api';
 import { isSkipped, SKIP_RECORD } from '../lib/progressUtil';
 import { starsFor } from '../games/ui';
+import { ACTIVITY_ICONS, Lock, SkipForward, Star } from '../ui/icons';
 import { nav } from '../App';
 
-const TYPE_ICONS: Record<string, string> = {
-  intro: '🃏',
-  flashcards: '✏️',
-  wordsearch: '🔍',
-  match: '🧲',
-  memory: '🧠',
-  story: '📖',
-  order: '🔢',
-  paint: '🎨',
-  quiz: '❓',
+const TYPE_COLORS: Record<string, string> = {
+  intro: '#0d9488',
+  flashcards: '#f59e0b',
+  wordsearch: '#3b82f6',
+  match: '#8b5cf6',
+  memory: '#ec4899',
+  story: '#a16207',
+  order: '#16a34a',
+  paint: '#e05252',
+  quiz: '#d97706',
 };
 
 export default function UnitView({
@@ -70,8 +71,9 @@ export default function UnitView({
         {unit.activities.map((a, i) => {
           const rec = progress.completed[a.id];
           const skipped = isSkipped(progress, a.id);
-          // פעילות פתוחה אם: מסלול חופשי, הראשונה, או שהקודמת הושלמה/דולגה
           const open = !!progress.freeNav || i === 0 || !!progress.completed[unit.activities[i - 1].id];
+          const color = TYPE_COLORS[a.type] || 'var(--teal)';
+          const IconComp = ACTIVITY_ICONS[a.type];
           return (
             <div
               key={a.id}
@@ -80,7 +82,7 @@ export default function UnitView({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 14,
-                opacity: open ? 1 : 0.5,
+                opacity: open ? 1 : 0.55,
                 border: rec && !skipped ? '2px solid var(--green)' : '2px solid transparent',
                 padding: '16px 18px',
               }}
@@ -99,7 +101,21 @@ export default function UnitView({
                   padding: 0,
                 }}
               >
-                <span style={{ fontSize: 30 }}>{open ? TYPE_ICONS[a.type] : '🔒'}</span>
+                <span
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
+                    background: open ? `${color}1c` : '#eef0ea',
+                    border: `2px solid ${open ? color : '#c4cabb'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  {open ? <IconComp size={23} color={color} strokeWidth={2.3} /> : <Lock size={21} color="#8b937f" />}
+                </span>
                 <div style={{ flex: 1 }}>
                   <h3 style={{ fontSize: 17 }}>{a.title}</h3>
                   <p style={{ margin: '2px 0 0', fontSize: 13.5, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
@@ -107,24 +123,30 @@ export default function UnitView({
                   </p>
                 </div>
               </button>
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                {rec && !skipped && <span style={{ fontSize: 20 }}>{'⭐'.repeat(starsFor(rec.score, rec.max))}</span>}
-                {skipped && <span style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 700 }}>⏭️ דולג</span>}
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                {rec && !skipped && (
+                  <span style={{ display: 'flex', gap: 1 }}>
+                    {[1, 2, 3].map((k) => (
+                      <Star key={k} filled={k <= starsFor(rec.score, rec.max)} size={16} />
+                    ))}
+                  </span>
+                )}
+                {skipped && (
+                  <span className="pill" style={{ cursor: 'default', gap: 5, padding: '4px 12px', fontSize: 12.5 }}>
+                    <SkipForward size={14} />
+                    דולג
+                  </span>
+                )}
                 {open && !rec && (
                   <button
+                    className="pill"
                     onClick={() => skip(a.id)}
                     disabled={busySkip === a.id}
                     title="סימון הפעילות כ'בחרתי לדלג' — אפשר לחזור אליה בכל שלב"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--ink-soft)',
-                      fontSize: 12.5,
-                      textDecoration: 'underline',
-                      padding: 0,
-                    }}
+                    style={{ cursor: 'pointer', padding: '4px 12px', fontSize: 12.5 }}
                   >
-                    {busySkip === a.id ? '...' : 'דלגו ⏭️'}
+                    <SkipForward size={14} />
+                    {busySkip === a.id ? '...' : 'דלגו'}
                   </button>
                 )}
               </div>
