@@ -301,7 +301,7 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
             <div
               key={s.act.id}
               className="trail-node-wrap"
-              style={{ position: 'absolute', left: `${p.x}%`, top: p.y, transform: 'translate(-50%, -50%)', zIndex: 2 }}
+              style={{ position: 'absolute', left: `${p.x}%`, top: p.y, transform: 'translate(-50%, -50%)' }}
             >
               <button
                 onClick={() => open && nav(`/play/${s.unit.id}/${s.act.id}`)}

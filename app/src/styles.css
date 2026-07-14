@@ -124,6 +124,15 @@ h1, h2, h3 { margin: 0; }
 }
 .float-up { animation: float-up 0.4s ease both; }
 
+/* תחנה במפת המסע — בריחוף עולה מעל השכנות כדי שהכיתוב לא ייחסם */
+.trail-node-wrap {
+  z-index: 2;
+}
+.trail-node-wrap:hover,
+.trail-node-wrap:focus-within {
+  z-index: 40;
+}
+
 /* טולטיפ של תחנה במפת המסע — מופיע בריחוף */
 .trail-tip {
   position: absolute;
