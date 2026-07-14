@@ -36,7 +36,7 @@ export default function PlayView({
   };
 
   return (
-    <SoftPageShell opacity={0.14}>
+    <SoftPageShell seed={activity.id}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 60px' }}>
         <button
           className="btn small"

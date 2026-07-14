@@ -192,7 +192,7 @@ export default function JourneyMap({
 
   // ─── תצוגת רשימה ───
   return (
-    <SoftPageShell opacity={0.14}>
+    <SoftPageShell seed="map-list">
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 60px' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 6 }}>
         <div>

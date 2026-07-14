@@ -166,7 +166,7 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: TeacherSession; onLo
   };
 
   return (
-    <SoftPageShell opacity={0.12}>
+    <SoftPageShell seed="teacher">
     <div style={{ maxWidth: 1080, margin: '0 auto', padding: '20px 16px 60px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
         <div>

@@ -15,7 +15,7 @@ export default function ProgressView({
   progress: ProgressData;
 }) {
   return (
-    <SoftPageShell opacity={0.14}>
+    <SoftPageShell seed="progress">
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 60px' }}>
       <button className="btn small" style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }} onClick={() => nav('/map')}>
         → חזרה למפת המסע
