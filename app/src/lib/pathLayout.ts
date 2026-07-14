@@ -6,72 +6,55 @@ export const BG = '/rashi/bg-journey.webp';
 export const BG_RATIO = 2413 / 1200;
 export const UNIT_COLORS = ['#0d9488', '#f59e0b', '#8b5cf6', '#e05252', '#3b82f6', '#ec4899', '#16a34a', '#a16207', '#d97706'];
 
-export const LS_PATH = 'rashi_station_pos_v1';
+/** גרסה חדשה — מתעלמים משמירות ישנות של לפני ההתאמה הידנית */
+export const LS_PATH = 'rashi_station_pos_v2';
 
-/** נקודות בקרה ברירת־מחדל על השביל */
-export const PATH_CTRL: Pt[] = [
-  { x: 44.0, y: 97.0 },
-  { x: 42.0, y: 94.2 },
-  { x: 45.5, y: 91.2 },
-  { x: 50.0, y: 88.2 },
-  { x: 54.5, y: 85.2 },
-  { x: 57.5, y: 82.2 },
-  { x: 56.5, y: 79.2 },
-  { x: 51.0, y: 76.2 },
-  { x: 45.0, y: 73.2 },
-  { x: 40.0, y: 70.0 },
-  { x: 37.5, y: 66.5 },
-  { x: 39.5, y: 63.0 },
-  { x: 43.5, y: 59.5 },
-  { x: 47.0, y: 56.0 },
-  { x: 45.0, y: 52.5 },
-  { x: 41.5, y: 49.0 },
-  { x: 40.0, y: 45.5 },
-  { x: 44.0, y: 42.0 },
-  { x: 49.5, y: 38.5 },
-  { x: 55.0, y: 35.0 },
-  { x: 59.0, y: 31.5 },
-  { x: 61.5, y: 28.2 },
-  { x: 60.5, y: 25.2 },
-  { x: 58.0, y: 22.8 },
+/** מיקומי 32 התחנות — הותאמו ידנית על השביל */
+export const STATION_POS: Pt[] = [
+  { x: 50.2, y: 97.1 }, // 1
+  { x: 53.5, y: 93.8 }, // 2
+  { x: 46.5, y: 92.6 }, // 3
+  { x: 38.6, y: 89.4 }, // 4
+  { x: 32.0, y: 85.6 }, // 5
+  { x: 39.0, y: 82.8 }, // 6
+  { x: 45.1, y: 80.4 }, // 7
+  { x: 54.3, y: 80.6 }, // 8
+  { x: 51.6, y: 76.9 }, // 9
+  { x: 45.1, y: 75.7 }, // 10
+  { x: 40.2, y: 72.2 }, // 11
+  { x: 47.6, y: 70.0 }, // 12
+  { x: 52.2, y: 68.9 }, // 13
+  { x: 59.4, y: 68.0 }, // 14
+  { x: 68.6, y: 67.7 }, // 15
+  { x: 75.1, y: 66.6 }, // 16
+  { x: 67.6, y: 63.6 }, // 17
+  { x: 59.4, y: 62.1 }, // 18
+  { x: 51.6, y: 60.7 }, // 19
+  { x: 58.2, y: 59.3 }, // 20
+  { x: 47.5, y: 57.0 }, // 21
+  { x: 56.3, y: 54.6 }, // 22
+  { x: 53.7, y: 50.6 }, // 23
+  { x: 45.5, y: 49.2 }, // 24
+  { x: 37.5, y: 47.7 }, // 25
+  { x: 50.4, y: 44.3 }, // 26
+  { x: 51.2, y: 41.9 }, // 27
+  { x: 57.3, y: 40.4 }, // 28
+  { x: 66.9, y: 39.0 }, // 29
+  { x: 61.4, y: 36.5 }, // 30
+  { x: 64.7, y: 34.1 }, // 31
+  { x: 66.7, y: 31.1 }, // 32
 ];
 
-export const TROPHY_POS: Pt = { x: 57.5, y: 20.6 };
-export const START_POS: Pt = { x: 44.0, y: 98.5 };
+export const START_POS: Pt = { x: 50.2, y: 98.6 };
+export const TROPHY_POS: Pt = { x: 66.7, y: 28.0 };
 export const CLOUD_COVER: Pt = { x: 58.8, y: 16.2 };
-
-function dist(a: Pt, b: Pt) {
-  const dx = a.x - b.x;
-  const dy = (a.y - b.y) * BG_RATIO;
-  return Math.hypot(dx, dy);
-}
-
-export function sampleAlong(ctrl: Pt[], n: number): Pt[] {
-  if (n <= 0) return [];
-  if (n === 1) return [{ ...ctrl[0] }];
-  const seg: number[] = [0];
-  for (let i = 1; i < ctrl.length; i++) seg.push(seg[i - 1] + dist(ctrl[i - 1], ctrl[i]));
-  const total = seg[seg.length - 1] || 1;
-  const out: Pt[] = [];
-  for (let i = 0; i < n; i++) {
-    const t = (i / (n - 1)) * total;
-    let j = 1;
-    while (j < seg.length - 1 && seg[j] < t) j++;
-    const a = ctrl[j - 1];
-    const b = ctrl[j];
-    const span = seg[j] - seg[j - 1] || 1;
-    const u = (t - seg[j - 1]) / span;
-    out.push({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
-  }
-  return out;
-}
 
 export function stationCount(): number {
   return UNITS.reduce((n, u) => n + u.activities.length, 0);
 }
 
 export function defaultStationPositions(): Pt[] {
-  return sampleAlong(PATH_CTRL, stationCount());
+  return STATION_POS.map((p) => ({ ...p }));
 }
 
 export function loadStationPositions(): Pt[] {
