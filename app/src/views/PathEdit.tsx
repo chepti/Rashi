@@ -127,14 +127,14 @@ export default function PathEdit() {
         לחצו «העתקת קוד» ושלחו לי / הדביקו בשיחה — ואעדכן בקובץ.
       </p>
 
-      <div style={{ width: '100%', overflowX: 'hidden' }}>
+      <div style={{ width: '100%', overflowX: size.compact ? 'auto' : 'hidden' }}>
         <div
           ref={boardRef}
           style={{
             position: 'relative',
             width: size.w,
             height: size.h,
-            margin: '0 auto',
+            margin: size.compact ? `0 0 0 ${size.offsetX}px` : '0 auto',
             backgroundImage: `url(${BG})`,
             backgroundSize: '100% 100%',
             touchAction: 'none',

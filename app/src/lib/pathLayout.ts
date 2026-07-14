@@ -80,11 +80,60 @@ export function clearStationPositions(): void {
   window.dispatchEvent(new Event('rashi-path'));
 }
 
-/** רוחב מלא של המסך — השביל תמיד נראה; גובה לפי יחס התמונה */
-export function boardSize() {
-  const w = Math.max(320, window.innerWidth);
+/** מרכז אופקי משוער של השביל על התמונה (%) — למיקוד במובייל */
+export const PATH_FOCUS_X = 52;
+
+export interface BoardSize {
+  /** רוחב לוח המפה (יכול להיות רחב מהמסך במובייל) */
+  w: number;
+  h: number;
+  /** רוחב חלון התצוגה */
+  viewW: number;
+  /** הזזה אופקית (שלילית) כדי למרכז את השביל במסך צר */
+  offsetX: number;
+  /** מצב מובייל/צר — לוח גדול מהמסך, נקודות קטנות יותר */
+  compact: boolean;
+}
+
+/**
+ * גודל לוח המפה.
+ * בדסקטופ: רוחב = מסך, גובה לפי יחס התמונה.
+ * במובייל: רוחב וירטואלי גדול יותר → גובה גדול יותר → מרחב בין תחנות וגלילה ארוכה,
+ * והתמונה ממורכזת על אזור השביל (קצוות נחתכים).
+ */
+export function boardSize(): BoardSize {
+  const viewW = Math.max(320, window.innerWidth);
+  const compact = viewW < 720;
+
+  let w: number;
+  if (compact) {
+    // יעד: מספיק גובה כדי שתחנות לא יידבקו (≈50px ממוצע בין תחנות לאורך המסלול)
+    const nGaps = Math.max(1, stationCount() - 1);
+    const spanY = 0.66;
+    const targetGap = 50;
+    const minH = Math.round((nGaps * targetGap) / spanY);
+    const fromGaps = Math.round(minH / BG_RATIO);
+    // רצפה ותקרה — מספיק מרחב בלי לוח ענק מדי
+    w = Math.min(1180, Math.max(980, fromGaps, Math.round(viewW * 2.55)));
+  } else {
+    w = viewW;
+  }
+
   const h = Math.round(w * BG_RATIO);
-  return { w, h };
+
+  // ממקדים את מרכז השביל במרכז המסך
+  const focus = PATH_FOCUS_X / 100;
+  let offsetX = viewW / 2 - w * focus;
+  const minOffset = viewW - w;
+  offsetX = Math.max(minOffset, Math.min(0, offsetX));
+
+  return { w, h, viewW, offsetX, compact };
+}
+
+/** מגבילים הזזת pan אופקית לגבולות הלוח */
+export function clampBoardPan(baseOffsetX: number, panX: number, viewW: number, boardW: number): number {
+  const minOffset = viewW - boardW;
+  return Math.max(minOffset, Math.min(0, baseOffsetX + panX));
 }
 
 export function positionsToTs(pts: Pt[]): string {
