@@ -177,6 +177,13 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: TeacherSession; onLo
           >
             🗺️ צפייה בשלבי המשחק
           </button>
+          <button
+            className="btn secondary small"
+            onClick={() => nav('/path-edit')}
+            title="גרירת תחנות על השביל להתאמה ידנית"
+          >
+            ✏️ התאמת מסלול
+          </button>
           <button className="btn small" style={{ background: 'transparent', boxShadow: 'none', color: 'var(--ink-soft)' }} onClick={onLogout}>
             יציאה
           </button>

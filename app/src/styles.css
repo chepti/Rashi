@@ -136,7 +136,7 @@ h1, h2, h3 { margin: 0; }
 /* טולטיפ של תחנה — כותרת + הסבר הפעילות */
 .trail-tip {
   position: absolute;
-  bottom: calc(100% + 28px);
+  bottom: calc(100% + 18px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
   opacity: 0;

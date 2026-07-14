@@ -7,6 +7,7 @@ import UnitView from './views/UnitView';
 import PlayView from './views/PlayView';
 import ProgressView from './views/ProgressView';
 import Teacher from './views/Teacher';
+import PathEdit from './views/PathEdit';
 
 // ניתוב מבוסס hash — עובד בכל אחסון סטטי בלי הגדרות שרת.
 
@@ -59,7 +60,9 @@ export default function App() {
   const route = parts[0] || '';
 
   let view: React.ReactNode;
-  if (route === 'teacher') {
+  if (route === 'path-edit') {
+    view = <PathEdit />;
+  } else if (route === 'teacher') {
     view = <Teacher />;
   } else if (route === 'join') {
     const joinCode = parts[1] || '';
