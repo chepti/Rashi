@@ -1,35 +1,91 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { UNITS } from '../data/units';
+import type { Unit, Activity } from '../data/types';
 import type { ProgressData } from '../lib/api';
-import { unitUnlocked, unitCompleted, unitDoneCount } from '../lib/progressUtil';
+import { unitUnlocked, isSkipped } from '../lib/progressUtil';
 import { starsFor } from '../games/ui';
-import { Lock, Check, Star, Eye, BookOpen, Trophy } from '../ui/icons';
+import { ACTIVITY_ICONS, Lock, Check, Star, Trophy } from '../ui/icons';
 import { nav } from '../App';
 
-// מפת מסע גבוהה: התמונה גדולה ממסך אחד.
-// הגלילה מתחילה בתחתית (ה־fold = החלק התחתון), ומתקדמים כלפי מעלה.
+// מפת מסע גבוהה: 32 תחנות (פעילויות) על השביל המצויר.
+// צבע לפי יחידה, דגלי הסבר בין הפרקים. הגלילה מתחילה מלמטה.
 
 const BG = '/rashi/bg-journey.webp';
-const BG_RATIO = 2413 / 1200; // גובה/רוחב של תמונת הרקע
-/** כמה מסכי גובה התמונה תופסת — כך ב־fold נראה בערך החמישית התחתונה */
+const BG_RATIO = 2413 / 1200;
 const VIEWPORTS_TALL = 4.8;
 
 const UNIT_COLORS = ['#0d9488', '#f59e0b', '#8b5cf6', '#e05252', '#3b82f6', '#ec4899', '#16a34a', '#a16207', '#d97706'];
 
-// מיקומי התחנות באחוזים — עוקבים אחרי השביל המצויר בתמונה, מלמטה למעלה
-const NODE_POS: { x: number; y: number }[] = [
-  { x: 44, y: 92 },
-  { x: 40, y: 84.5 },
-  { x: 48, y: 77 },
-  { x: 53.5, y: 70 },
-  { x: 47, y: 62.5 },
-  { x: 40.5, y: 55 },
-  { x: 45, y: 47.5 },
-  { x: 52.5, y: 40 },
-  { x: 54, y: 32.5 },
+interface Pt { x: number; y: number }
+
+/** נקודות בקרה על השביל המצויר — מלמטה (התחלה) למעלה (היעד) */
+const PATH_CTRL: Pt[] = [
+  { x: 45.5, y: 97.2 },
+  { x: 43.0, y: 94.5 },
+  { x: 47.5, y: 91.8 },
+  { x: 52.0, y: 89.0 },
+  { x: 57.5, y: 86.0 },
+  { x: 61.5, y: 82.8 }, // גשר
+  { x: 63.0, y: 79.5 },
+  { x: 60.0, y: 76.5 },
+  { x: 54.5, y: 73.5 },
+  { x: 48.0, y: 70.5 },
+  { x: 42.5, y: 67.5 },
+  { x: 39.0, y: 64.0 },
+  { x: 40.5, y: 60.5 },
+  { x: 45.0, y: 57.0 },
+  { x: 50.5, y: 53.5 },
+  { x: 53.5, y: 50.0 },
+  { x: 50.0, y: 46.5 },
+  { x: 44.5, y: 43.0 },
+  { x: 40.0, y: 39.5 },
+  { x: 42.5, y: 36.0 },
+  { x: 48.0, y: 32.5 },
+  { x: 52.5, y: 29.0 },
+  { x: 54.5, y: 25.5 },
+  { x: 53.0, y: 22.0 }, // ליד היעד
 ];
-const TROPHY_POS = { x: 55, y: 24.5 };
-const START_POS = { x: 45, y: 97.5 };
+
+const TROPHY_POS = { x: 54.0, y: 18.5 };
+const START_POS = { x: 45.5, y: 98.6 };
+/** ענן שמכסה את אזור הצלב על המגדל */
+const CLOUD_COVER = { x: 58.9, y: 19.9 };
+
+function dist(a: Pt, b: Pt) {
+  const dx = a.x - b.x;
+  const dy = (a.y - b.y) * BG_RATIO; // משקל אנכי לפי יחס התמונה
+  return Math.hypot(dx, dy);
+}
+
+/** דגימת n נקודות במרווחים שווים לאורך פוליליין */
+function sampleAlong(ctrl: Pt[], n: number): Pt[] {
+  if (n <= 0) return [];
+  if (n === 1) return [ctrl[0]];
+  const seg: number[] = [0];
+  for (let i = 1; i < ctrl.length; i++) seg.push(seg[i - 1] + dist(ctrl[i - 1], ctrl[i]));
+  const total = seg[seg.length - 1] || 1;
+  const out: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i / (n - 1)) * total;
+    let j = 1;
+    while (j < seg.length - 1 && seg[j] < t) j++;
+    const a = ctrl[j - 1];
+    const b = ctrl[j];
+    const span = seg[j] - seg[j - 1] || 1;
+    const u = (t - seg[j - 1]) / span;
+    out.push({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
+  }
+  return out;
+}
+
+interface Station {
+  unit: Unit;
+  unitIndex: number;
+  act: Activity;
+  actIndex: number;
+  globalIndex: number;
+  pos: Pt;
+}
 
 function boardSize() {
   const vh = window.innerHeight || 800;
@@ -40,8 +96,37 @@ function boardSize() {
 
 export default function JourneyTrail({ progress }: { progress: ProgressData }) {
   const [size, setSize] = useState(boardSize);
-  const currentIdx = UNITS.findIndex((u, i) => unitUnlocked(progress, i) && !unitCompleted(progress, u));
-  const allDone = currentIdx === -1;
+
+  const stations: Station[] = useMemo(() => {
+    const flat: Omit<Station, 'pos'>[] = [];
+    UNITS.forEach((unit, unitIndex) =>
+      unit.activities.forEach((act, actIndex) =>
+        flat.push({ unit, unitIndex, act, actIndex, globalIndex: flat.length })
+      )
+    );
+    const pts = sampleAlong(PATH_CTRL, flat.length);
+    return flat.map((s, i) => ({ ...s, pos: pts[i] }));
+  }, []);
+
+  const unitFlags = useMemo(() => {
+    const flags: { unitIndex: number; pos: Pt; title: string; color: string }[] = [];
+    for (let ui = 0; ui < UNITS.length; ui++) {
+      const first = stations.find((s) => s.unitIndex === ui);
+      if (!first) continue;
+      // דגל משמאל/ימין לסירוגין, מעט מעל תחנת הפתיחה של היחידה
+      const side = ui % 2 === 0 ? -1 : 1;
+      flags.push({
+        unitIndex: ui,
+        title: UNITS[ui].title,
+        color: UNIT_COLORS[ui],
+        pos: {
+          x: Math.min(88, Math.max(12, first.pos.x + side * 14)),
+          y: first.pos.y + 1.2,
+        },
+      });
+    }
+    return flags;
+  }, [stations]);
 
   useEffect(() => {
     const onResize = () => setSize(boardSize());
@@ -49,17 +134,12 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // גלילה לתחתית המפה אחרי הפריסה — ה־fold מציג את תחילת המסע
   useLayoutEffect(() => {
     const toBottom = () => {
-      const top = Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight
-      );
+      const top = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
       window.scrollTo(0, top);
     };
     toBottom();
-    // אחרי טעינת התמונה הגובה עלול להתייצב שוב
     const t = window.setTimeout(toBottom, 80);
     const img = new Image();
     img.src = BG;
@@ -67,21 +147,15 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
     return () => window.clearTimeout(t);
   }, [size.h]);
 
-  const nodeIcon = (unitIndex: number, color: string, active: boolean) => {
-    const u = UNITS[unitIndex];
-    const c = active ? '#fff' : color;
-    if (u.id === 'similar') return <Eye size={24} color={c} strokeWidth={2.4} />;
-    if (u.id === 'story') return <BookOpen size={24} color={c} strokeWidth={2.4} />;
-    if (u.id === 'all') return <Trophy size={24} color={c} strokeWidth={2.4} />;
-    if (u.newLetters.length >= 1 && u.newLetters.length <= 2) {
-      return (
-        <span className="rashi-font" style={{ fontSize: u.newLetters.length === 2 ? 22 : 28, color: c, lineHeight: 1 }}>
-          {u.newLetters.join('')}
-        </span>
-      );
-    }
-    return <span style={{ fontSize: 24, fontWeight: 900, color: c }}>{unitIndex + 1}</span>;
+  const isOpen = (s: Station): boolean => {
+    if (progress.freeNav) return true;
+    if (!unitUnlocked(progress, s.unitIndex)) return false;
+    if (s.actIndex === 0) return true;
+    return !!progress.completed[s.unit.activities[s.actIndex - 1].id];
   };
+
+  const currentIdx = stations.findIndex((s) => isOpen(s) && !progress.completed[s.act.id]);
+  const allDone = currentIdx === -1 && stations.every((s) => progress.completed[s.act.id]);
 
   return (
     <div
@@ -93,7 +167,6 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
         background: 'linear-gradient(180deg, #bfe3f5 0%, #a9d99a 45%, #8ec96a 100%)',
       }}
     >
-      {/* רקע מטושטש מאחורי הלוח (כשהלוח רחב מהמסך — הצדדים נחתכים) */}
       <div
         aria-hidden
         style={{
@@ -110,7 +183,6 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
         }}
       />
 
-      {/* הלוח — יחס התמונה המלא, גבוה ממסך אחד; ממורכז וצדדים נחתכים במסך צר */}
       <div
         style={{
           position: 'relative',
@@ -124,6 +196,29 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           boxShadow: '0 0 60px rgba(20, 60, 20, 0.35)',
         }}
       >
+        {/* ענן נוסף מעל אזור המגדל — מסתיר צלב אם נשאר */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: `${CLOUD_COVER.x}%`,
+            top: `${CLOUD_COVER.y}%`,
+            transform: 'translate(-50%, -50%)',
+            width: '22%',
+            height: '9%',
+            pointerEvents: 'none',
+            zIndex: 2,
+          }}
+        >
+          <svg viewBox="0 0 220 100" width="100%" height="100%" style={{ overflow: 'visible' }}>
+            <ellipse cx="80" cy="52" rx="62" ry="32" fill="rgba(253,250,240,0.98)" />
+            <ellipse cx="130" cy="44" rx="68" ry="36" fill="rgba(253,250,240,0.99)" />
+            <ellipse cx="165" cy="55" rx="50" ry="28" fill="rgba(253,250,240,0.97)" />
+            <ellipse cx="45" cy="58" rx="42" ry="24" fill="rgba(253,250,240,0.97)" />
+            <ellipse cx="110" cy="68" rx="70" ry="30" fill="rgba(253,250,240,0.98)" />
+          </svg>
+        </div>
+
         <Marker pos={START_POS}>
           <div
             style={{
@@ -168,107 +263,107 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           </div>
         </Marker>
 
-        {UNITS.map((unit, i) => {
-          const pos = NODE_POS[i];
-          const unlocked = unitUnlocked(progress, i);
-          const completed = unitCompleted(progress, unit);
-          const isCurrent = i === currentIdx;
-          const done = unitDoneCount(progress, unit);
-          const color = UNIT_COLORS[i];
+        {/* דגלי פרקים */}
+        {unitFlags.map((f) => (
+          <Marker key={`flag-${f.unitIndex}`} pos={f.pos}>
+            <div
+              style={{
+                background: f.color,
+                color: '#fff',
+                borderRadius: 10,
+                padding: '5px 12px',
+                fontSize: 12.5,
+                fontWeight: 800,
+                border: '2.5px solid rgba(255,255,255,0.85)',
+                boxShadow: '0 3px 10px rgba(20,60,20,0.4)',
+                whiteSpace: 'nowrap',
+                maxWidth: 160,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {f.unitIndex + 1}. {f.title}
+            </div>
+          </Marker>
+        ))}
 
-          let sc = 0, mx = 0;
-          for (const a of unit.activities) {
-            const r = progress.completed[a.id];
-            if (r && !(r.max === 1 && r.score === 0)) { sc += r.score; mx += r.max; }
-          }
-          const stars = mx > 0 ? starsFor(sc, mx) : 0;
+        {/* 32 תחנות פעילות */}
+        {stations.map((s) => {
+          const open = isOpen(s);
+          const done = !!progress.completed[s.act.id];
+          const skipped = isSkipped(progress, s.act.id);
+          const isCurrent = s.globalIndex === currentIdx;
+          const color = UNIT_COLORS[s.unitIndex];
+          const rec = progress.completed[s.act.id];
+          const stars = rec && !skipped ? starsFor(rec.score, rec.max) : 0;
+          const Icon = ACTIVITY_ICONS[s.act.type] || ACTIVITY_ICONS.quiz;
 
           let bg = 'rgba(255,255,255,0.96)';
           let ring = color;
-          if (!unlocked) { bg = 'rgba(226,229,223,0.92)'; ring = '#8fa088'; }
-          else if (completed) { bg = color; }
+          if (!open) { bg = 'rgba(226,229,223,0.92)'; ring = '#8fa088'; }
+          else if (done && !skipped) { bg = color; }
+
+          const nodeSize = isCurrent ? 52 : 46;
 
           return (
-            <Marker key={unit.id} pos={pos} className="trail-node-wrap">
+            <Marker key={s.act.id} pos={s.pos} className="trail-node-wrap">
               <button
-                onClick={() => unlocked && nav(`/unit/${unit.id}`)}
-                aria-label={unit.title}
+                onClick={() => open && nav(`/play/${s.unit.id}/${s.act.id}`)}
+                aria-label={s.act.title}
                 style={{
-                  width: isCurrent ? 62 : 56,
-                  height: isCurrent ? 62 : 56,
+                  width: nodeSize,
+                  height: nodeSize,
                   borderRadius: '50%',
-                  border: `4px solid ${completed ? '#ffffff' : ring}`,
+                  border: `3.5px solid ${done && !skipped ? '#ffffff' : ring}`,
                   background: bg,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: unlocked ? 'pointer' : 'default',
+                  cursor: open ? 'pointer' : 'default',
                   boxShadow: isCurrent
-                    ? `0 0 0 7px ${color}55, 0 5px 14px rgba(20,60,20,0.5)`
-                    : '0 5px 14px rgba(20,60,20,0.5)',
+                    ? `0 0 0 6px ${color}55, 0 4px 12px rgba(20,60,20,0.5)`
+                    : '0 4px 12px rgba(20,60,20,0.45)',
                   animation: isCurrent ? 'trail-pulse 1.8s ease-in-out infinite' : 'none',
                   transition: 'transform 0.15s',
                   position: 'relative',
                 }}
-                onMouseEnter={(e) => unlocked && (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseEnter={(e) => open && (e.currentTarget.style.transform = 'scale(1.12)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
               >
-                {!unlocked ? <Lock size={22} color="#7c8873" /> : nodeIcon(i, color, completed)}
+                {!open ? (
+                  <Lock size={18} color="#7c8873" />
+                ) : (
+                  <Icon size={22} color={done && !skipped ? '#fff' : color} strokeWidth={2.3} />
+                )}
 
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: -8,
-                    right: -8,
-                    width: 25,
-                    height: 25,
-                    borderRadius: '50%',
-                    background: isCurrent ? color : '#7d5226',
-                    color: '#fff',
-                    fontSize: 13,
-                    fontWeight: 900,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '2.5px solid #fff',
-                  }}
-                >
-                  {i + 1}
-                </span>
-                {completed && (
+                {done && !skipped && (
                   <span
                     style={{
                       position: 'absolute',
-                      bottom: -6,
-                      left: -6,
-                      width: 22,
-                      height: 22,
+                      bottom: -5,
+                      left: -5,
+                      width: 18,
+                      height: 18,
                       borderRadius: '50%',
                       background: '#fff',
-                      border: `2.5px solid ${color}`,
+                      border: `2px solid ${color}`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Check size={12} color={color} strokeWidth={3.4} />
+                    <Check size={10} color={color} strokeWidth={3.4} />
                   </span>
                 )}
               </button>
 
-              <div style={{ height: 20, display: 'flex', justifyContent: 'center', gap: 1, marginTop: 4, filter: 'drop-shadow(0 2px 3px rgba(20,60,20,0.6))' }}>
-                {completed ? (
-                  [1, 2, 3].map((k) => <Star key={k} filled={k <= stars} size={14} />)
-                ) : unlocked && done > 0 ? (
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', background: 'rgba(40,90,30,0.8)', borderRadius: 999, padding: '2px 9px' }}>
-                    {done}/{unit.activities.length}
-                  </span>
-                ) : null}
+              <div style={{ height: 16, display: 'flex', justifyContent: 'center', gap: 1, marginTop: 2, filter: 'drop-shadow(0 2px 3px rgba(20,60,20,0.55))' }}>
+                {done && !skipped ? [1, 2, 3].map((k) => <Star key={k} filled={k <= stars} size={11} />) : null}
               </div>
 
               <div className="trail-tip">
-                <div style={{ fontWeight: 800 }}>{unit.title}</div>
-                <div style={{ fontSize: 11.5, opacity: 0.8 }}>{unit.subtitle}</div>
+                <div style={{ fontWeight: 800, fontSize: 13 }}>{s.act.title}</div>
+                <div style={{ fontSize: 11, opacity: 0.8 }}>{s.unit.title}</div>
               </div>
             </Marker>
           );
