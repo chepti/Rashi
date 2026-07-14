@@ -3,6 +3,7 @@ import { LETTERS } from '../data/letters';
 import type { StudentSession, ProgressData } from '../lib/api';
 import { masteryFrom, masteryColor, masteryLabel } from '../lib/mastery';
 import { nav } from '../App';
+import { SoftPageShell } from '../ui/PageShell';
 
 // "אוסף האותיות שלי" — התלמיד רואה את השליטה שלו בכל אות
 
@@ -14,6 +15,7 @@ export default function ProgressView({
   progress: ProgressData;
 }) {
   return (
+    <SoftPageShell opacity={0.14}>
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 60px' }}>
       <button className="btn small" style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }} onClick={() => nav('/map')}>
         → חזרה למפת המסע
@@ -62,5 +64,6 @@ export default function ProgressView({
         })}
       </div>
     </div>
+    </SoftPageShell>
   );
 }

@@ -5,6 +5,7 @@ import { isSkipped, SKIP_RECORD } from '../lib/progressUtil';
 import { starsFor } from '../games/ui';
 import { ACTIVITY_ICONS, Lock, SkipForward, Star } from '../ui/icons';
 import { nav } from '../App';
+import { SoftPageShell } from '../ui/PageShell';
 
 const TYPE_COLORS: Record<string, string> = {
   intro: '#0d9488',
@@ -47,6 +48,7 @@ export default function UnitView({
   };
 
   return (
+    <SoftPageShell opacity={0.14}>
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px 60px' }}>
       <button className="btn small" style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }} onClick={() => nav('/map')}>
         → חזרה למפת המסע
@@ -155,5 +157,6 @@ export default function UnitView({
         })}
       </div>
     </div>
+    </SoftPageShell>
   );
 }

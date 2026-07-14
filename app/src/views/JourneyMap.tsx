@@ -6,6 +6,7 @@ import { unitDoneCount, unitUnlocked, unitCompleted, overallPercent, allComplete
 import { soundEnabled, toggleSound } from '../lib/sound';
 import { TypeIcon, Volume2, VolumeX, ListIcon, Users, School, Unlock } from '../ui/icons';
 import JourneyTrail from './JourneyTrail';
+import { SoftPageShell } from '../ui/PageShell';
 import { nav } from '../App';
 
 type MapView = 'trail' | 'list';
@@ -191,6 +192,7 @@ export default function JourneyMap({
 
   // ─── תצוגת רשימה ───
   return (
+    <SoftPageShell opacity={0.14}>
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 60px' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 6 }}>
         <div>
@@ -331,5 +333,6 @@ export default function JourneyMap({
         })}
       </div>
     </div>
+    </SoftPageShell>
   );
 }

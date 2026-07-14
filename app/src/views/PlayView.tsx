@@ -4,6 +4,7 @@ import GameHost from '../games/GameHost';
 import { reportAttempt, type StudentSession } from '../lib/api';
 import type { ActivityResult } from '../data/types';
 import { nav } from '../App';
+import { SoftPageShell } from '../ui/PageShell';
 
 export default function PlayView({
   unitId,
@@ -35,18 +36,20 @@ export default function PlayView({
   };
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 60px' }}>
-      <button
-        className="btn small"
-        style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }}
-        onClick={() => {
-          sessionStorage.setItem('rashi_focus_act', activity.id);
-          nav('/map');
-        }}
-      >
-        → חזרה למפת המסע
-      </button>
-      <GameHost key={activity.id} activity={activity} onDone={done} />
-    </div>
+    <SoftPageShell opacity={0.14}>
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 60px' }}>
+        <button
+          className="btn small"
+          style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }}
+          onClick={() => {
+            sessionStorage.setItem('rashi_focus_act', activity.id);
+            nav('/map');
+          }}
+        >
+          → חזרה למפת המסע
+        </button>
+        <GameHost key={activity.id} activity={activity} onDone={done} />
+      </div>
+    </SoftPageShell>
   );
 }

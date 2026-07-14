@@ -108,39 +108,39 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // המפה תמיד נפתחת מהתחתית (תחילת המסע), אלא אם חוזרים מפעילות ספציפית
   useLayoutEffect(() => {
     const focusId = sessionStorage.getItem('rashi_focus_act');
     if (focusId) {
       sessionStorage.removeItem('rashi_focus_act');
       const el = document.getElementById(`station-${focusId}`);
       if (el) {
-        el.scrollIntoView({ block: 'center' });
+        // אחרי פריסת הגובה — ממקדים את התחנה
+        requestAnimationFrame(() => el.scrollIntoView({ block: 'center' }));
         return;
       }
     }
-    if (sessionStorage.getItem('rashi_map_seen') === '1') {
-      const y = Number(sessionStorage.getItem('rashi_map_scroll') || '0');
-      if (y > 0) window.scrollTo(0, y);
-      return;
-    }
     const toBottom = () => {
-      const top = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+      const top = Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        size.h
+      );
       window.scrollTo(0, top);
-      sessionStorage.setItem('rashi_map_seen', '1');
     };
     toBottom();
-    const t = window.setTimeout(toBottom, 80);
+    const t1 = window.setTimeout(toBottom, 0);
+    const t2 = window.setTimeout(toBottom, 100);
+    const t3 = window.setTimeout(toBottom, 350);
     const img = new Image();
     img.src = BG;
     img.onload = toBottom;
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
   }, [size.h]);
-
-  useEffect(() => {
-    const save = () => sessionStorage.setItem('rashi_map_scroll', String(window.scrollY));
-    window.addEventListener('scroll', save, { passive: true });
-    return () => window.removeEventListener('scroll', save);
-  }, []);
 
   const isOpen = (s: Station): boolean => {
     if (progress.freeNav) return true;

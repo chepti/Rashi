@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { joinClass, guestSession, type StudentSession } from '../lib/api';
 import { nav } from '../App';
+import { HeroBg } from '../ui/PageShell';
 
 // הזהות של תלמיד = שם + אימוג'י. האימוג'י הוא "סיסמה קטנה":
 // בכניסה הבאה חייבים לבחור את אותו אימוג'י — כך כמה תלמידים חולקים מחשב בבטחה.
@@ -46,6 +47,7 @@ export default function Join({
   };
 
   return (
+    <HeroBg image="/rashi/bg-join.webp" overlay="linear-gradient(170deg, rgba(19,60,50,0.55) 0%, rgba(15,80,70,0.5) 100%)">
     <div
       style={{
         minHeight: '100vh',
@@ -53,10 +55,9 @@ export default function Join({
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
-        background: 'linear-gradient(170deg, #134e4a, #0f766e)',
       }}
     >
-      <form className="card pop-in" onSubmit={submit} style={{ width: '100%', maxWidth: 430, textAlign: 'center' }}>
+      <form className="card pop-in" onSubmit={submit} style={{ width: '100%', maxWidth: 430, textAlign: 'center', background: 'rgba(255,255,255,0.94)' }}>
         <div style={{ fontSize: 44 }}>{isGuest ? '🧭' : '🎒'}</div>
         <h2 style={{ margin: '6px 0 4px' }}>{isGuest ? 'תרגול חופשי' : 'הצטרפות לכיתה'}</h2>
         <p style={{ color: 'var(--ink-soft)', fontSize: 15, marginTop: 0 }}>
@@ -141,5 +142,6 @@ export default function Join({
         </button>
       </form>
     </div>
+    </HeroBg>
   );
 }

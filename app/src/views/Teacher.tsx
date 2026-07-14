@@ -9,6 +9,7 @@ import { LETTERS } from '../data/letters';
 import { masteryFrom, masteryColor, masteryLabel } from '../lib/mastery';
 import { totalActivities } from '../data/units';
 import { nav } from '../App';
+import { SoftPageShell, HeroBg } from '../ui/PageShell';
 
 function classJoinUrl(code: string): string {
   const base = `${window.location.origin}${window.location.pathname.replace(/\/?$/, '/')}`;
@@ -58,8 +59,9 @@ function TeacherAuth({ onAuth }: { onAuth: (t: TeacherSession) => void }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'linear-gradient(170deg,#1e293b,#334155)' }}>
-      <form className="card pop-in" onSubmit={submit} style={{ width: '100%', maxWidth: 400 }}>
+    <HeroBg image="/rashi/bg-cottage.webp" overlay="linear-gradient(170deg, rgba(30,41,59,0.72) 0%, rgba(51,65,85,0.65) 100%)">
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <form className="card pop-in" onSubmit={submit} style={{ width: '100%', maxWidth: 400, background: 'rgba(255,255,255,0.95)' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: 40 }}>👩‍🏫</div>
           <h2>אזור המורים</h2>
@@ -98,6 +100,7 @@ function TeacherAuth({ onAuth }: { onAuth: (t: TeacherSession) => void }) {
         </button>
       </form>
     </div>
+    </HeroBg>
   );
 }
 
@@ -163,6 +166,7 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: TeacherSession; onLo
   };
 
   return (
+    <SoftPageShell opacity={0.12}>
     <div style={{ maxWidth: 1080, margin: '0 auto', padding: '20px 16px 60px' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
         <div>
@@ -264,6 +268,7 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: TeacherSession; onLo
         </p>
       )}
     </div>
+    </SoftPageShell>
   );
 }
 
