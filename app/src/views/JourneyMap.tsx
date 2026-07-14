@@ -48,17 +48,9 @@ export default function JourneyMap({
     }
   }, [finished]);
 
-  // במפת המסע מתחילים מתחתית המפה — שם תחילת הדרך.
-  // הדפדפן משחזר גלילה אחרי טעינה, לכן מכבים את השחזור ומנסים פעמיים.
+  // במפת המסע הגלילה מתחילה מלמטה (JourneyTrail); ברשימה — לראש העמוד
   useEffect(() => {
-    if (view === 'trail') {
-      if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-      const toBottom = () => window.scrollTo(0, document.documentElement.scrollHeight);
-      requestAnimationFrame(toBottom);
-      const t = setTimeout(toBottom, 120);
-      return () => clearTimeout(t);
-    }
-    window.scrollTo(0, 0);
+    if (view === 'list') window.scrollTo(0, 0);
   }, [view]);
 
   const isTeacherPreview = session.token === 'teacher-preview';
