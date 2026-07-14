@@ -30,7 +30,8 @@ export default function PlayView({
       // גם אם הדיווח נכשל — לא חוסמים את הילד
     }
     onReported();
-    nav(`/unit/${unit.id}`);
+    sessionStorage.setItem('rashi_focus_act', activity.id);
+    nav('/map');
   };
 
   return (
@@ -38,9 +39,12 @@ export default function PlayView({
       <button
         className="btn small"
         style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }}
-        onClick={() => nav(`/unit/${unit.id}`)}
+        onClick={() => {
+          sessionStorage.setItem('rashi_focus_act', activity.id);
+          nav('/map');
+        }}
       >
-        → יציאה מהפעילות
+        → חזרה למפת המסע
       </button>
       <GameHost key={activity.id} activity={activity} onDone={done} />
     </div>

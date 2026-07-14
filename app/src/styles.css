@@ -133,23 +133,24 @@ h1, h2, h3 { margin: 0; }
   z-index: 40;
 }
 
-/* טולטיפ של תחנה במפת המסע — מופיע בריחוף */
+/* טולטיפ של תחנה — כותרת + הסבר הפעילות */
 .trail-tip {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 28px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease, transform 0.15s ease;
-  white-space: nowrap;
+  white-space: normal;
+  width: min(240px, 70vw);
   background: #1e293b;
   color: #fff;
-  padding: 7px 14px;
-  border-radius: 11px;
+  padding: 10px 14px;
+  border-radius: 12px;
   font-size: 13.5px;
-  text-align: center;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  text-align: right;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
   z-index: 6;
 }
 .trail-tip::after {
@@ -158,13 +159,24 @@ h1, h2, h3 { margin: 0; }
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  border: 6px solid transparent;
+  border: 7px solid transparent;
   border-top-color: #1e293b;
 }
 .trail-node-wrap:hover .trail-tip,
 .trail-node-wrap:focus-within .trail-tip {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* קשת כוכבים מעל תחנה */
+.trail-star-arc {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 3;
 }
 
 /* כפתור pill משני קטן */

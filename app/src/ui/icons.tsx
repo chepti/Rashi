@@ -67,6 +67,30 @@ export function Star({ filled, size = 13 }: { filled: boolean; size?: number }) 
   );
 }
 
+/** כוכב תלת־ממדי בולט לקשת מעל תחנה במפה */
+export function Star3D({ filled, size = 22 }: { filled: boolean; size?: number }) {
+  const uid = React.useId().replace(/:/g, '');
+  const gid = `star3d-${uid}`;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ display: 'block', filter: filled ? 'drop-shadow(0 2px 3px rgba(120,70,0,0.55))' : 'none' }}>
+      <defs>
+        <radialGradient id={gid} cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor={filled ? '#fff6c8' : '#f1f5f9'} />
+          <stop offset="45%" stopColor={filled ? '#f6c53d' : '#e2e8f0'} />
+          <stop offset="100%" stopColor={filled ? '#d97706' : '#94a3b8'} />
+        </radialGradient>
+      </defs>
+      <polygon
+        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+        fill={`url(#${gid})`}
+        stroke={filled ? '#a16207' : '#64748b'}
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** אייקון לכל סוג פעילות */
 export const ACTIVITY_ICONS: Record<string, ReturnType<typeof make>> = {
   intro: Eye,

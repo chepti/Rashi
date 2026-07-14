@@ -4,11 +4,10 @@ import type { Unit, Activity } from '../data/types';
 import type { ProgressData } from '../lib/api';
 import { unitUnlocked, isSkipped } from '../lib/progressUtil';
 import { starsFor } from '../games/ui';
-import { ACTIVITY_ICONS, Lock, Check, Star, Trophy } from '../ui/icons';
+import { ACTIVITY_ICONS, Lock, Check, Star3D, Trophy } from '../ui/icons';
 import { nav } from '../App';
 
-// מפת מסע גבוהה: 32 תחנות (פעילויות) על השביל המצויר.
-// צבע לפי יחידה, דגלי הסבר בין הפרקים. הגלילה מתחילה מלמטה.
+// מפת מסע גבוהה: 32 תחנות על השביל. חזרה מפעילות → למפה + כוכבים בקשת.
 
 const BG = '/rashi/bg-journey.webp';
 const BG_RATIO = 2413 / 1200;
@@ -18,46 +17,48 @@ const UNIT_COLORS = ['#0d9488', '#f59e0b', '#8b5cf6', '#e05252', '#3b82f6', '#ec
 
 interface Pt { x: number; y: number }
 
-/** נקודות בקרה על השביל המצויר — מלמטה (התחלה) למעלה (היעד) */
+/**
+ * נקודות בקרה על השביל המצויר (לא הנהר) — מלמטה למעלה.
+ * אחרי הגשר השביל נשאר בשמאל המים; למעלה הוא מתעקל ימינה אל הכפר.
+ */
 const PATH_CTRL: Pt[] = [
-  { x: 45.5, y: 97.2 },
-  { x: 43.0, y: 94.5 },
-  { x: 47.5, y: 91.8 },
-  { x: 52.0, y: 89.0 },
-  { x: 57.5, y: 86.0 },
-  { x: 61.5, y: 82.8 }, // גשר
-  { x: 63.0, y: 79.5 },
-  { x: 60.0, y: 76.5 },
-  { x: 54.5, y: 73.5 },
-  { x: 48.0, y: 70.5 },
-  { x: 42.5, y: 67.5 },
-  { x: 39.0, y: 64.0 },
-  { x: 40.5, y: 60.5 },
-  { x: 45.0, y: 57.0 },
-  { x: 50.5, y: 53.5 },
-  { x: 53.5, y: 50.0 },
-  { x: 50.0, y: 46.5 },
-  { x: 44.5, y: 43.0 },
-  { x: 40.0, y: 39.5 },
-  { x: 42.5, y: 36.0 },
-  { x: 48.0, y: 32.5 },
-  { x: 52.5, y: 29.0 },
-  { x: 54.5, y: 25.5 },
-  { x: 53.0, y: 22.0 }, // ליד היעד
+  { x: 44.0, y: 97.0 },
+  { x: 42.0, y: 94.2 },
+  { x: 45.5, y: 91.2 },
+  { x: 50.0, y: 88.2 },
+  { x: 54.5, y: 85.2 },
+  { x: 57.5, y: 82.2 }, // גשר — מרכז האבן
+  { x: 56.5, y: 79.2 },
+  { x: 51.0, y: 76.2 }, // יורדים מהגשר לשביל, לא למים
+  { x: 45.0, y: 73.2 },
+  { x: 40.0, y: 70.0 }, // שמאל הזרם
+  { x: 37.5, y: 66.5 },
+  { x: 39.5, y: 63.0 },
+  { x: 43.5, y: 59.5 },
+  { x: 47.0, y: 56.0 },
+  { x: 45.0, y: 52.5 },
+  { x: 41.5, y: 49.0 },
+  { x: 40.0, y: 45.5 },
+  { x: 44.0, y: 42.0 },
+  { x: 49.5, y: 38.5 },
+  { x: 55.0, y: 35.0 }, // מתעקל ימינה אל שביל הכפר
+  { x: 59.0, y: 31.5 },
+  { x: 61.5, y: 28.2 },
+  { x: 60.5, y: 25.2 },
+  { x: 58.0, y: 22.8 }, // מתחת לענן ההסתרה
 ];
 
-const TROPHY_POS = { x: 54.0, y: 18.5 };
-const START_POS = { x: 45.5, y: 98.6 };
-/** ענן שמכסה את אזור הצלב על המגדל */
-const CLOUD_COVER = { x: 58.9, y: 19.9 };
+const TROPHY_POS = { x: 57.5, y: 20.6 };
+const START_POS = { x: 44.0, y: 98.5 };
+/** ענן קטן רק מעל ראש המגדל */
+const CLOUD_COVER = { x: 58.8, y: 16.2 };
 
 function dist(a: Pt, b: Pt) {
   const dx = a.x - b.x;
-  const dy = (a.y - b.y) * BG_RATIO; // משקל אנכי לפי יחס התמונה
+  const dy = (a.y - b.y) * BG_RATIO;
   return Math.hypot(dx, dy);
 }
 
-/** דגימת n נקודות במרווחים שווים לאורך פוליליין */
 function sampleAlong(ctrl: Pt[], n: number): Pt[] {
   if (n <= 0) return [];
   if (n === 1) return [ctrl[0]];
@@ -94,6 +95,34 @@ function boardSize() {
   return { w, h };
 }
 
+/** שלושה כוכבים בקשת מעל העיגול */
+function StarArc({ count }: { count: number }) {
+  const angles = [-34, 0, 34];
+  const radius = 36;
+  return (
+    <div className="trail-star-arc" aria-hidden>
+      {angles.map((deg, i) => {
+        const a = (deg * Math.PI) / 180;
+        const x = Math.sin(a) * radius;
+        const y = -Math.cos(a) * radius - 6;
+        return (
+          <span
+            key={i}
+            style={{
+              position: 'absolute',
+              left: x,
+              top: y,
+              transform: `translate(-50%, -50%) rotate(${deg * 0.35}deg)`,
+            }}
+          >
+            <Star3D filled={i < count} size={i === 1 ? 24 : 20} />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function JourneyTrail({ progress }: { progress: ProgressData }) {
   const [size, setSize] = useState(boardSize);
 
@@ -113,15 +142,14 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
     for (let ui = 0; ui < UNITS.length; ui++) {
       const first = stations.find((s) => s.unitIndex === ui);
       if (!first) continue;
-      // דגל משמאל/ימין לסירוגין, מעט מעל תחנת הפתיחה של היחידה
       const side = ui % 2 === 0 ? -1 : 1;
       flags.push({
         unitIndex: ui,
         title: UNITS[ui].title,
         color: UNIT_COLORS[ui],
         pos: {
-          x: Math.min(88, Math.max(12, first.pos.x + side * 14)),
-          y: first.pos.y + 1.2,
+          x: Math.min(86, Math.max(14, first.pos.x + side * 7.5)),
+          y: first.pos.y - 0.15,
         },
       });
     }
@@ -134,10 +162,26 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // חזרה מפעילות → ממקדים את התחנה; כניסה ראשונה → לתחתית המפה
   useLayoutEffect(() => {
+    const focusId = sessionStorage.getItem('rashi_focus_act');
+    if (focusId) {
+      sessionStorage.removeItem('rashi_focus_act');
+      const el = document.getElementById(`station-${focusId}`);
+      if (el) {
+        el.scrollIntoView({ block: 'center' });
+        return;
+      }
+    }
+    if (sessionStorage.getItem('rashi_map_seen') === '1') {
+      const y = Number(sessionStorage.getItem('rashi_map_scroll') || '0');
+      if (y > 0) window.scrollTo(0, y);
+      return;
+    }
     const toBottom = () => {
       const top = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
       window.scrollTo(0, top);
+      sessionStorage.setItem('rashi_map_seen', '1');
     };
     toBottom();
     const t = window.setTimeout(toBottom, 80);
@@ -146,6 +190,12 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
     img.onload = toBottom;
     return () => window.clearTimeout(t);
   }, [size.h]);
+
+  useEffect(() => {
+    const save = () => sessionStorage.setItem('rashi_map_scroll', String(window.scrollY));
+    window.addEventListener('scroll', save, { passive: true });
+    return () => window.removeEventListener('scroll', save);
+  }, []);
 
   const isOpen = (s: Station): boolean => {
     if (progress.freeNav) return true;
@@ -156,6 +206,11 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
 
   const currentIdx = stations.findIndex((s) => isOpen(s) && !progress.completed[s.act.id]);
   const allDone = currentIdx === -1 && stations.every((s) => progress.completed[s.act.id]);
+
+  const openPlay = (s: Station) => {
+    sessionStorage.setItem('rashi_focus_act', s.act.id);
+    nav(`/play/${s.unit.id}/${s.act.id}`);
+  };
 
   return (
     <div
@@ -196,7 +251,7 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           boxShadow: '0 0 60px rgba(20, 60, 20, 0.35)',
         }}
       >
-        {/* ענן נוסף מעל אזור המגדל — מסתיר צלב אם נשאר */}
+        {/* ענן הסתרה קטן — רק ראש המגדל, לא מסתיר תחנות */}
         <div
           aria-hidden
           style={{
@@ -204,22 +259,20 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
             left: `${CLOUD_COVER.x}%`,
             top: `${CLOUD_COVER.y}%`,
             transform: 'translate(-50%, -50%)',
-            width: '22%',
-            height: '9%',
+            width: '12%',
+            height: '4.5%',
             pointerEvents: 'none',
             zIndex: 2,
           }}
         >
-          <svg viewBox="0 0 220 100" width="100%" height="100%" style={{ overflow: 'visible' }}>
-            <ellipse cx="80" cy="52" rx="62" ry="32" fill="rgba(253,250,240,0.98)" />
-            <ellipse cx="130" cy="44" rx="68" ry="36" fill="rgba(253,250,240,0.99)" />
-            <ellipse cx="165" cy="55" rx="50" ry="28" fill="rgba(253,250,240,0.97)" />
-            <ellipse cx="45" cy="58" rx="42" ry="24" fill="rgba(253,250,240,0.97)" />
-            <ellipse cx="110" cy="68" rx="70" ry="30" fill="rgba(253,250,240,0.98)" />
+          <svg viewBox="0 0 180 80" width="100%" height="100%" style={{ overflow: 'visible' }}>
+            <ellipse cx="90" cy="40" rx="55" ry="28" fill="rgba(253,250,240,0.97)" />
+            <ellipse cx="60" cy="48" rx="38" ry="20" fill="rgba(253,250,240,0.95)" />
+            <ellipse cx="120" cy="46" rx="40" ry="22" fill="rgba(253,250,240,0.95)" />
           </svg>
         </div>
 
-        <Marker pos={START_POS}>
+        <Marker pos={START_POS} ground={false}>
           <div
             style={{
               background: '#7d5226',
@@ -237,7 +290,7 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           </div>
         </Marker>
 
-        <Marker pos={TROPHY_POS}>
+        <Marker pos={TROPHY_POS} ground={false}>
           <div style={{ textAlign: 'center' }}>
             <div
               style={{
@@ -263,21 +316,20 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           </div>
         </Marker>
 
-        {/* דגלי פרקים */}
         {unitFlags.map((f) => (
-          <Marker key={`flag-${f.unitIndex}`} pos={f.pos}>
+          <Marker key={`flag-${f.unitIndex}`} pos={f.pos} ground={false}>
             <div
               style={{
                 background: f.color,
                 color: '#fff',
-                borderRadius: 10,
-                padding: '5px 12px',
-                fontSize: 12.5,
+                borderRadius: 9,
+                padding: '4px 10px',
+                fontSize: 12,
                 fontWeight: 800,
-                border: '2.5px solid rgba(255,255,255,0.85)',
-                boxShadow: '0 3px 10px rgba(20,60,20,0.4)',
+                border: '2px solid rgba(255,255,255,0.9)',
+                boxShadow: '0 3px 8px rgba(20,60,20,0.4)',
                 whiteSpace: 'nowrap',
-                maxWidth: 160,
+                maxWidth: 140,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
               }}
@@ -287,7 +339,6 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           </Marker>
         ))}
 
-        {/* 32 תחנות פעילות */}
         {stations.map((s) => {
           const open = isOpen(s);
           const done = !!progress.completed[s.act.id];
@@ -298,17 +349,34 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           const stars = rec && !skipped ? starsFor(rec.score, rec.max) : 0;
           const Icon = ACTIVITY_ICONS[s.act.type] || ACTIVITY_ICONS.quiz;
 
-          let bg = 'rgba(255,255,255,0.96)';
+          let bg = 'rgba(255,255,255,0.97)';
           let ring = color;
-          if (!open) { bg = 'rgba(226,229,223,0.92)'; ring = '#8fa088'; }
+          if (!open) { bg = 'rgba(226,229,223,0.94)'; ring = '#8fa088'; }
           else if (done && !skipped) { bg = color; }
 
-          const nodeSize = isCurrent ? 52 : 46;
+          const nodeSize = isCurrent ? 50 : 44;
 
           return (
-            <Marker key={s.act.id} pos={s.pos} className="trail-node-wrap">
+            <Marker key={s.act.id} pos={s.pos} className="trail-node-wrap" ground id={`station-${s.act.id}`}>
+              {done && !skipped && <StarArc count={stars} />}
+
+              {/* צל על הקרקע — מדביק את התחנה לשביל */}
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: -4,
+                  width: nodeSize * 0.85,
+                  height: 12,
+                  transform: 'translateX(-50%)',
+                  background: 'radial-gradient(ellipse, rgba(40,60,20,0.45) 0%, rgba(40,60,20,0) 70%)',
+                  pointerEvents: 'none',
+                }}
+              />
+
               <button
-                onClick={() => open && nav(`/play/${s.unit.id}/${s.act.id}`)}
+                onClick={() => open && openPlay(s)}
                 aria-label={s.act.title}
                 style={{
                   width: nodeSize,
@@ -321,29 +389,29 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
                   justifyContent: 'center',
                   cursor: open ? 'pointer' : 'default',
                   boxShadow: isCurrent
-                    ? `0 0 0 6px ${color}55, 0 4px 12px rgba(20,60,20,0.5)`
-                    : '0 4px 12px rgba(20,60,20,0.45)',
+                    ? `0 0 0 6px ${color}55, 0 6px 10px rgba(20,60,20,0.45)`
+                    : '0 5px 10px rgba(20,60,20,0.4)',
                   animation: isCurrent ? 'trail-pulse 1.8s ease-in-out infinite' : 'none',
                   transition: 'transform 0.15s',
                   position: 'relative',
                 }}
-                onMouseEnter={(e) => open && (e.currentTarget.style.transform = 'scale(1.12)')}
+                onMouseEnter={(e) => open && (e.currentTarget.style.transform = 'scale(1.1)')}
                 onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
               >
                 {!open ? (
-                  <Lock size={18} color="#7c8873" />
+                  <Lock size={17} color="#7c8873" />
                 ) : (
-                  <Icon size={22} color={done && !skipped ? '#fff' : color} strokeWidth={2.3} />
+                  <Icon size={20} color={done && !skipped ? '#fff' : color} strokeWidth={2.3} />
                 )}
 
                 {done && !skipped && (
                   <span
                     style={{
                       position: 'absolute',
-                      bottom: -5,
-                      left: -5,
-                      width: 18,
-                      height: 18,
+                      bottom: -4,
+                      left: -4,
+                      width: 17,
+                      height: 17,
                       borderRadius: '50%',
                       background: '#fff',
                       border: `2px solid ${color}`,
@@ -357,13 +425,11 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
                 )}
               </button>
 
-              <div style={{ height: 16, display: 'flex', justifyContent: 'center', gap: 1, marginTop: 2, filter: 'drop-shadow(0 2px 3px rgba(20,60,20,0.55))' }}>
-                {done && !skipped ? [1, 2, 3].map((k) => <Star key={k} filled={k <= stars} size={11} />) : null}
-              </div>
-
               <div className="trail-tip">
-                <div style={{ fontWeight: 800, fontSize: 13 }}>{s.act.title}</div>
-                <div style={{ fontSize: 11, opacity: 0.8 }}>{s.unit.title}</div>
+                <div style={{ fontWeight: 800, fontSize: 13.5 }}>{s.act.title}</div>
+                <div style={{ fontSize: 12, opacity: 0.88, marginTop: 5, lineHeight: 1.4 }}>
+                  {s.act.instructions}
+                </div>
               </div>
             </Marker>
           );
@@ -377,19 +443,25 @@ function Marker({
   pos,
   children,
   className,
+  ground = true,
+  id,
 }: {
   pos: { x: number; y: number };
   children: React.ReactNode;
   className?: string;
+  /** נקודת העיגון בתחתית — כדי שהעיגול "יושב" על השביל */
+  ground?: boolean;
+  id?: string;
 }) {
   return (
     <div
+      id={id}
       className={className}
       style={{
         position: 'absolute',
         left: `${pos.x}%`,
         top: `${pos.y}%`,
-        transform: 'translate(-50%, -50%)',
+        transform: ground ? 'translate(-50%, -82%)' : 'translate(-50%, -50%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
