@@ -125,6 +125,15 @@ h1, h2, h3 { margin: 0; }
 .float-up { animation: float-up 0.4s ease both; }
 
 /* תחנה במפת המסע — בריחוף עולה מעל השכנות כדי שהכיתוב לא ייחסם */
+/* גלילה אופקית במפת מסע (מובייל) — בלי פס גלילה בולט */
+.trail-h-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.trail-h-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .trail-node-wrap {
   z-index: 2;
 }

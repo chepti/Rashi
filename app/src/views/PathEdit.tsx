@@ -19,6 +19,7 @@ export default function PathEdit() {
   const [drag, setDrag] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   const stations = useMemo(() => {
     const list: { id: string; title: string; unitIndex: number; unitTitle: string; type: string }[] = [];
@@ -35,12 +36,18 @@ export default function PathEdit() {
   }, []);
 
   useEffect(() => {
-    // כניסה לתחתית כמו במפה
+    // כניסה לתחתית כמו במפה + מיקוד אופקי על השביל
+    if (scrollerRef.current && size.compact) {
+      scrollerRef.current.scrollLeft = size.scrollLeft;
+    }
     const t = window.setTimeout(() => {
+      if (scrollerRef.current && size.compact) {
+        scrollerRef.current.scrollLeft = size.scrollLeft;
+      }
       window.scrollTo(0, Math.max(document.documentElement.scrollHeight, document.body.scrollHeight));
     }, 60);
     return () => window.clearTimeout(t);
-  }, [size.h]);
+  }, [size.h, size.compact, size.scrollLeft]);
 
   const clientToPct = useCallback((clientX: number, clientY: number): Pt | null => {
     const el = boardRef.current;
@@ -127,18 +134,27 @@ export default function PathEdit() {
         לחצו «העתקת קוד» ושלחו לי / הדביקו בשיחה — ואעדכן בקובץ.
       </p>
 
-      <div style={{ width: '100%', overflowX: size.compact ? 'auto' : 'hidden' }}>
+      <div
+        ref={scrollerRef}
+        style={{
+          width: '100%',
+          overflowX: size.compact ? 'auto' : 'hidden',
+          direction: 'ltr',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         <div
           ref={boardRef}
           style={{
             position: 'relative',
             width: size.w,
             height: size.h,
-            margin: size.compact ? `0 0 0 ${size.offsetX}px` : '0 auto',
+            margin: 0,
             backgroundImage: `url(${BG})`,
             backgroundSize: '100% 100%',
             touchAction: 'none',
             userSelect: 'none',
+            direction: 'ltr',
           }}
         >
           <svg

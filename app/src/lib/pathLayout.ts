@@ -89,17 +89,17 @@ export interface BoardSize {
   h: number;
   /** רוחב חלון התצוגה */
   viewW: number;
-  /** הזזה אופקית (שלילית) כדי למרכז את השביל במסך צר */
-  offsetX: number;
   /** מצב מובייל/צר — לוח גדול מהמסך, נקודות קטנות יותר */
   compact: boolean;
+  /** scrollLeft שממרכז את השביל בחלון */
+  scrollLeft: number;
 }
 
 /**
  * גודל לוח המפה.
  * בדסקטופ: רוחב = מסך, גובה לפי יחס התמונה.
- * במובייל: רוחב וירטואלי גדול יותר → גובה גדול יותר → מרחב בין תחנות וגלילה ארוכה,
- * והתמונה ממורכזת על אזור השביל (קצוות נחתכים).
+ * במובייל: רוחב וירטואלי גדול יותר → גובה גדול יותר → מרחב בין תחנות,
+ * עם גלילה אופקית אמיתית (LTR) אל מרכז השביל.
  */
 export function boardSize(): BoardSize {
   const viewW = Math.max(320, window.innerWidth);
@@ -107,33 +107,34 @@ export function boardSize(): BoardSize {
 
   let w: number;
   if (compact) {
-    // יעד: מספיק גובה כדי שתחנות לא יידבקו (≈50px ממוצע בין תחנות לאורך המסלול)
     const nGaps = Math.max(1, stationCount() - 1);
     const spanY = 0.66;
     const targetGap = 50;
     const minH = Math.round((nGaps * targetGap) / spanY);
     const fromGaps = Math.round(minH / BG_RATIO);
-    // רצפה ותקרה — מספיק מרחב בלי לוח ענק מדי
     w = Math.min(1180, Math.max(980, fromGaps, Math.round(viewW * 2.55)));
   } else {
     w = viewW;
   }
 
   const h = Math.round(w * BG_RATIO);
+  const scrollLeft = compact
+    ? Math.max(0, Math.min(w - viewW, w * (PATH_FOCUS_X / 100) - viewW / 2))
+    : 0;
 
-  // ממקדים את מרכז השביל במרכז המסך
-  const focus = PATH_FOCUS_X / 100;
-  let offsetX = viewW / 2 - w * focus;
-  const minOffset = viewW - w;
-  offsetX = Math.max(minOffset, Math.min(0, offsetX));
-
-  return { w, h, viewW, offsetX, compact };
+  return { w, h, viewW, compact, scrollLeft };
 }
 
-/** מגבילים הזזת pan אופקית לגבולות הלוח */
-export function clampBoardPan(baseOffsetX: number, panX: number, viewW: number, boardW: number): number {
-  const minOffset = viewW - boardW;
-  return Math.max(minOffset, Math.min(0, baseOffsetX + panX));
+/** ממרכז את אזור השביל (או תחנה) בגלילה האופקית */
+export function scrollBoardToFocus(
+  scroller: HTMLElement | null,
+  boardW: number,
+  viewW: number,
+  focusXPercent = PATH_FOCUS_X,
+) {
+  if (!scroller || boardW <= viewW) return;
+  const left = Math.max(0, Math.min(boardW - viewW, boardW * (focusXPercent / 100) - viewW / 2));
+  scroller.scrollLeft = left;
 }
 
 export function positionsToTs(pts: Pt[]): string {
