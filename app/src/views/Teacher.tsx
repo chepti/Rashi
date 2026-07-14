@@ -10,6 +10,7 @@ import { masteryFrom, masteryColor, masteryLabel } from '../lib/mastery';
 import { totalActivities } from '../data/units';
 import { nav } from '../App';
 import { SoftPageShell, HeroBg } from '../ui/PageShell';
+import { FeedbackButton, SiteCredit } from '../ui/Feedback';
 
 function classJoinUrl(code: string): string {
   const base = `${window.location.origin}${window.location.pathname.replace(/\/?$/, '/')}`;
@@ -173,7 +174,8 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: TeacherSession; onLo
           <h1 style={{ fontSize: 24 }}>👩‍🏫 שלום, {teacher.name}</h1>
           <p style={{ color: 'var(--ink-soft)', fontSize: 14, margin: '2px 0 0' }}>לוח מעקב — מסע כתב רש"י</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <FeedbackButton compact />
           <button
             className="btn secondary small"
             onClick={openPreview}
@@ -267,6 +269,9 @@ function TeacherDashboard({ teacher, onLogout }: { teacher: TeacherSession; onLo
             : 'צרו כיתה ראשונה, שלחו לתלמידים את הקישור או את הקוד המספרי — והמפה תתמלא מעצמה'}
         </p>
       )}
+      <div style={{ marginTop: 40, display: 'flex', justifyContent: 'flex-end' }}>
+        <SiteCredit />
+      </div>
     </div>
     </SoftPageShell>
   );

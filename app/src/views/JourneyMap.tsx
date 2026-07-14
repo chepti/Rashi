@@ -7,6 +7,7 @@ import { soundEnabled, toggleSound } from '../lib/sound';
 import { TypeIcon, Volume2, VolumeX, ListIcon, Users, School, Unlock } from '../ui/icons';
 import JourneyTrail from './JourneyTrail';
 import { SoftPageShell } from '../ui/PageShell';
+import { FeedbackButton } from '../ui/Feedback';
 import { nav } from '../App';
 
 type MapView = 'trail' | 'list';
@@ -165,6 +166,13 @@ export default function JourneyMap({
           </label>
         )}
 
+        {/* משוב — רק למורה / תרגול חופשי */}
+        {(isTeacherPreview || session.token === 'guest') && (
+          <div style={{ position: 'fixed', bottom: finished ? 96 : 14, right: 12, zIndex: 10 }}>
+            <FeedbackButton compact />
+          </div>
+        )}
+
         {/* חגיגת סיום */}
         {finished && (
           <div
@@ -225,6 +233,7 @@ export default function JourneyMap({
               מסלול חופשי
             </label>
           )}
+          {(isTeacherPreview || session.token === 'guest') && <FeedbackButton compact />}
           <button className="btn secondary small" onClick={() => switchView('trail')}>
             🗺️ מפת מסע
           </button>

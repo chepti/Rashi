@@ -5,6 +5,7 @@ import { reportAttempt, type StudentSession } from '../lib/api';
 import type { ActivityResult } from '../data/types';
 import { nav } from '../App';
 import { SoftPageShell } from '../ui/PageShell';
+import { FeedbackButton } from '../ui/Feedback';
 
 export default function PlayView({
   unitId,
@@ -17,6 +18,7 @@ export default function PlayView({
   session: StudentSession;
   onReported: () => void;
 }) {
+  const showFeedback = session.token === 'guest' || session.token === 'teacher-preview';
   const unit = UNITS.find((u) => u.id === unitId);
   const activity = unit?.activities.find((a) => a.id === activityId);
   if (!unit || !activity) {
@@ -38,16 +40,19 @@ export default function PlayView({
   return (
     <SoftPageShell seed={activity.id}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '20px 16px 60px' }}>
-        <button
-          className="btn small"
-          style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }}
-          onClick={() => {
-            sessionStorage.setItem('rashi_focus_act', activity.id);
-            nav('/map');
-          }}
-        >
-          → חזרה למפת המסע
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
+          <button
+            className="btn small"
+            style={{ background: 'transparent', boxShadow: 'none', color: 'var(--teal-dark)', fontWeight: 700 }}
+            onClick={() => {
+              sessionStorage.setItem('rashi_focus_act', activity.id);
+              nav('/map');
+            }}
+          >
+            → חזרה למפת המסע
+          </button>
+          {showFeedback && <FeedbackButton compact />}
+        </div>
         <GameHost key={activity.id} activity={activity} onDone={done} />
       </div>
     </SoftPageShell>

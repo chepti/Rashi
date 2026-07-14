@@ -1,6 +1,7 @@
 import React from 'react';
 import { nav } from '../App';
 import { HeroBg } from '../ui/PageShell';
+import { SiteCredit } from '../ui/Feedback';
 
 export default function Landing() {
   return (
@@ -13,6 +14,7 @@ export default function Landing() {
           alignItems: 'center',
           justifyContent: 'center',
           padding: 24,
+          position: 'relative',
         }}
       >
         <div className="pop-in" style={{ textAlign: 'center', color: '#fff', marginBottom: 36 }}>
@@ -25,8 +27,12 @@ export default function Landing() {
           </p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%', maxWidth: 340 }}>
-          <button className="btn gold" style={{ fontSize: 20, padding: '16px 28px' }} onClick={() => nav('/join')}>
-            🎒 יש לי קוד כיתה — יוצאים לדרך!
+          <button
+            className="btn gold"
+            style={{ fontSize: 18, padding: '14px 22px', whiteSpace: 'nowrap' }}
+            onClick={() => nav('/join')}
+          >
+            יש לי קוד כיתה
           </button>
           <button
             className="btn"
@@ -46,6 +52,9 @@ export default function Landing() {
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 40, textShadow: '0 1px 6px rgba(0,0,0,0.35)' }}>
           מבוסס על אתר תרגול כתב רש"י ועל חוברת העבודה של הרב מרדכי שמואל בלוך
         </p>
+        <div style={{ position: 'absolute', bottom: 16, right: 16, left: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <SiteCredit light />
+        </div>
       </div>
     </HeroBg>
   );
