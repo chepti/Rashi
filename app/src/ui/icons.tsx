@@ -67,12 +67,13 @@ export function Star({ filled, size = 13 }: { filled: boolean; size?: number }) 
   );
 }
 
-/** כוכב תלת־ממדי בולט לקשת מעל תחנה במפה */
+/** כוכב תלת־ממדי בולט לקשת מעל תחנה במפה — עם מסגרת לבנה דקה */
 export function Star3D({ filled, size = 22 }: { filled: boolean; size?: number }) {
   const uid = React.useId().replace(/:/g, '');
   const gid = `star3d-${uid}`;
+  const pts = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2';
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ display: 'block', filter: filled ? 'drop-shadow(0 2px 3px rgba(120,70,0,0.55))' : 'none' }}>
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden style={{ display: 'block', filter: filled ? 'drop-shadow(0 2px 4px rgba(120,70,0,0.55))' : 'none' }}>
       <defs>
         <radialGradient id={gid} cx="35%" cy="30%" r="70%">
           <stop offset="0%" stopColor={filled ? '#fff6c8' : '#f1f5f9'} />
@@ -80,11 +81,12 @@ export function Star3D({ filled, size = 22 }: { filled: boolean; size?: number }
           <stop offset="100%" stopColor={filled ? '#d97706' : '#94a3b8'} />
         </radialGradient>
       </defs>
+      <polygon points={pts} fill="none" stroke="#fff" strokeWidth="3.4" strokeLinejoin="round" />
       <polygon
-        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+        points={pts}
         fill={`url(#${gid})`}
         stroke={filled ? '#a16207' : '#64748b'}
-        strokeWidth="1.4"
+        strokeWidth="1.25"
         strokeLinejoin="round"
       />
     </svg>

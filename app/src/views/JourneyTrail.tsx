@@ -6,7 +6,7 @@ import { unitUnlocked, isSkipped } from '../lib/progressUtil';
 import { starsFor } from '../games/ui';
 import { ACTIVITY_ICONS, Lock, Check, Star3D, Trophy } from '../ui/icons';
 import {
-  BG, UNIT_COLORS, TROPHY_POS, START_POS, CLOUD_COVER,
+  BG, BG_TINY, UNIT_COLORS, TROPHY_POS, START_POS, CLOUD_COVER,
   boardSize, loadStationPositions, type Pt,
 } from '../lib/pathLayout';
 import { nav } from '../App';
@@ -20,16 +20,16 @@ interface Station {
   pos: Pt;
 }
 
-/** כוכבים צמודים מעל העיגול — רדיוס קטן כדי שלא ייחתכו */
+/** כוכבים בקשת מעל העיגול — גדולים יותר + מסגרת לבנה */
 function StarArc({ count }: { count: number }) {
-  const angles = [-28, 0, 28];
-  const radius = 20;
+  const angles = [-30, 0, 30];
+  const radius = 22;
   return (
     <div className="trail-star-arc" aria-hidden>
       {angles.map((deg, i) => {
         const a = (deg * Math.PI) / 180;
         const x = Math.sin(a) * radius;
-        const y = -Math.cos(a) * radius + 2;
+        const y = -Math.cos(a) * radius + 1;
         return (
           <span
             key={i}
@@ -40,7 +40,7 @@ function StarArc({ count }: { count: number }) {
               transform: `translate(-50%, -50%) rotate(${deg * 0.3}deg)`,
             }}
           >
-            <Star3D filled={i < count} size={i === 1 ? 18 : 15} />
+            <Star3D filled={i < count} size={i === 1 ? 22 : 19} />
           </span>
         );
       })}
@@ -51,6 +51,7 @@ function StarArc({ count }: { count: number }) {
 export default function JourneyTrail({ progress }: { progress: ProgressData }) {
   const [size, setSize] = useState(boardSize);
   const [positions, setPositions] = useState<Pt[]>(() => loadStationPositions());
+  const [bgReady, setBgReady] = useState(false);
 
   useEffect(() => {
     const sync = () => setPositions(loadStationPositions());
@@ -60,6 +61,16 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
       window.removeEventListener('rashi-path', sync);
       window.removeEventListener('storage', sync);
     };
+  }, []);
+
+  // טעינת הרקע: קודם מציגים את התחתית (גלילה + placeholder), ואז מחליפים לתמונה המלאה
+  useEffect(() => {
+    let cancelled = false;
+    const img = new Image();
+    img.src = BG;
+    img.onload = () => { if (!cancelled) setBgReady(true); };
+    if (img.complete) setBgReady(true);
+    return () => { cancelled = true; };
   }, []);
 
   const stations: Station[] = useMemo(() => {
@@ -153,7 +164,8 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
         width: '100%',
         minHeight: size.h,
         overflowX: 'hidden',
-        background: 'linear-gradient(180deg, #bfe3f5 0%, #a9d99a 45%, #8ec96a 100%)',
+        // צבע תחתית הנוף — נראה מיד לפני שהתמונה נטענת
+        background: 'linear-gradient(180deg, #c5e4a8 0%, #8ec96a 55%, #6faf4a 100%)',
       }}
     >
       <div
@@ -163,11 +175,42 @@ export default function JourneyTrail({ progress }: { progress: ProgressData }) {
           width: size.w,
           height: size.h,
           margin: '0 auto',
-          backgroundImage: `url(${BG})`,
-          backgroundSize: '100% 100%',
-          backgroundRepeat: 'no-repeat',
+          overflow: 'hidden',
         }}
       >
+        {/* placeholder מטושטש — מיושר לתחתית, כדי שה־fold יראה כמו הנוף התחתון */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${BG_TINY})`,
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'center bottom',
+            backgroundRepeat: 'no-repeat',
+            filter: 'blur(10px) saturate(1.05)',
+            transform: 'scale(1.06)',
+            opacity: bgReady ? 0 : 1,
+            transition: 'opacity 0.35s ease',
+            pointerEvents: 'none',
+          }}
+        />
+        {/* התמונה המלאה — נכנסת אחרי טעינה; הגלילה כבר בתחתית */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${BG})`,
+            backgroundSize: '100% 100%',
+            backgroundPosition: 'center bottom',
+            backgroundRepeat: 'no-repeat',
+            opacity: bgReady ? 1 : 0,
+            transition: 'opacity 0.5s ease',
+            pointerEvents: 'none',
+          }}
+        />
+
         <div
           aria-hidden
           style={{
