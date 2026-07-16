@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { loadSession, saveSession, fetchProgress, type StudentSession, type ProgressData } from './lib/api';
 import Landing from './views/Landing';
 import Join from './views/Join';
@@ -8,6 +8,7 @@ import PlayView from './views/PlayView';
 import ProgressView from './views/ProgressView';
 import Teacher from './views/Teacher';
 import PathEdit from './views/PathEdit';
+import { trackPage } from './lib/analytics';
 
 // ניתוב מבוסס hash — עובד בכל אחסון סטטי בלי הגדרות שרת.
 
@@ -27,6 +28,15 @@ export function nav(to: string) {
 
 export default function App() {
   const hash = useHash();
+
+  // צפיית עמוד וירטואלית בכל מעבר מסך.
+  // מדלגים על הריצה הראשונה — gtag config כבר שלח את צפיית הכניסה.
+  const firstView = useRef(true);
+  useEffect(() => {
+    if (firstView.current) { firstView.current = false; return; }
+    trackPage(hash);
+  }, [hash]);
+
   const [session, setSession] = useState<StudentSession | null>(loadSession());
   const [progress, setProgress] = useState<ProgressData>({ letters: {}, completed: {} });
 
